@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ClaudeCodeEditorTabs">
+    <option name="activeSessionId" value="9f6b45f9-15d8-43cd-91eb-b41005c7a915" />
+    <option name="openSessionIds">
+      <list>
+        <option value="224ad7a4-a234-4aae-88fa-cc2ca593f900" />
+        <option value="e7429026-291f-40e2-a9d8-f126a6f362df" />
+        <option value="9f6b45f9-15d8-43cd-91eb-b41005c7a915" />
+      </list>
+    </option>
+    <option name="sessionPaths">
+      <map>
+        <entry key="224ad7a4-a234-4aae-88fa-cc2ca593f900" value="/sessions/174739c4-955c-4d14-a3b8-c7cf71c7a7c7" />
+        <entry key="9f6b45f9-15d8-43cd-91eb-b41005c7a915" value="/sessions/7e32a909-4339-4b90-a90c-6dff2f0b4569" />
+        <entry key="e7429026-291f-40e2-a9d8-f126a6f362df" value="/sessions/9c248d2b-4202-4671-bb0e-f1973face477" />
+      </map>
+    </option>
+    <option name="sessionTitles">
+      <map>
+        <entry key="224ad7a4-a234-4aae-88fa-cc2ca593f900" value="/tui default" />
+        <entry key="9f6b45f9-15d8-43cd-91eb-b41005c7a915" value="show me example of spi transfer byte" />
+        <entry key="e7429026-291f-40e2-a9d8-f126a6f362df" value="explain what is all about the BSRR in spi port" />
+      </map>
+    </option>
+  </component>
+</project>
