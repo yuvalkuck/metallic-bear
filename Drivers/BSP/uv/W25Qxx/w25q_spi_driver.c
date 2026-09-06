@@ -118,7 +118,7 @@ w25q_spi_status_t w25q_spi_transmit(const w25q_spi_handle_t* hspi, const uint8_t
     w25q_spi_status_t rc = SPI_ERROR_PARAM;
     const uint8_t* buff = buffer;
     if (hspi != NULL && buffer != NULL) {
-        w25q_spi_cs_assert();
+        w25q_spi_cs_assert(hspi);
         while (length > 0) {
             rc = w25q_spi_transfer_byte(hspi, *buff++, NULL);
             if (rc != SPI_OK) {
@@ -127,26 +127,9 @@ w25q_spi_status_t w25q_spi_transmit(const w25q_spi_handle_t* hspi, const uint8_t
             length--;
         }
         while (hspi->spi->SR & SPI_SR_BSY) {}
-        w25q_spi_cs_deassert();
+        w25q_spi_cs_deassert(hspi);
     }
     return rc;
-}
-
-if
-(hspi
-==
-NULL
-||
-buffer
-==
-NULL
-||
-length
-==
-0
-)
- {
-    return SPI_ERROR_PARAM;
 }
 
 
