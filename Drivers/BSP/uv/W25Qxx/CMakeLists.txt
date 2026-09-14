@@ -15,7 +15,7 @@ TARGET_INCLUDE_DIRECTORIES(${LIBRARY_NAME} PUBLIC
 
 TARGET_SOURCES(${LIBRARY_NAME} PRIVATE
         w25q_driver.c
-        w25q_spi_driver.c
+        w25q_spi.c
 )
 
 target_link_libraries(${LIBRARY_NAME} PUBLIC

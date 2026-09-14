@@ -2,11 +2,14 @@
 // Created by uv on 23/08/2026.
 //
 
-#include "w25q_spi_driver.h"
+#include "w25q_spi.h"
 
 #include <stddef.h>
 
 #define SPI_IO_CYCLES_LIMIT 100000U
+#define SPI_DUMMY_RECEIVE 0x00
+#define SPI_DUMMY_TRANSMIT 0xFF
+
 
 /* --- Core SPI Peripheral API Methods --- */
 /**
@@ -15,10 +18,14 @@
  * @retval w25q_spi_status_t: Configuration state outcome.
  */
 w25q_spi_status_t w25q_spi_init(const w25q_spi_handle_t* hspi) {
+    if (hspi == NULL || hspi->spi == NULL || hspi->cs_port == NULL) {
+        return SPI_ERROR_PARAM;
+    }
     w25q_spi_cs_deassert(hspi);
     // order first set what to do in cr2 and then go do it by SPI_CR1_SPE
     hspi->spi->CR2 |= SPI_CR2_FRXTH;
     hspi->spi->CR1 |= SPI_CR1_SPE;
+    return SPI_OK;
 }
 
 /**
@@ -99,16 +106,14 @@ w25q_spi_status_t w25q_spi_transmit(const w25q_spi_handle_t* hspi, const uint8_t
     w25q_spi_status_t rc = SPI_ERROR_PARAM;
     const uint8_t* buff = buffer;
     if (hspi != NULL && buffer != NULL) {
-        w25q_spi_cs_assert(hspi);
         while (length > 0) {
-            rc = w25q_spi_transfer_byte(hspi, *buff++, NULL);
+            rc = w25q_spi_transfer_byte(hspi, *buff++, SPI_DUMMY_RECEIVE);
             if (rc != SPI_OK) {
                 break;
             }
             length--;
         }
         while (hspi->spi->SR & SPI_SR_BSY) {}
-        w25q_spi_cs_deassert(hspi);
     }
     return rc;
 }
@@ -121,4 +126,19 @@ w25q_spi_status_t w25q_spi_transmit(const w25q_spi_handle_t* hspi, const uint8_t
  * @param  length: Total bytes expected to read.
  * @retval w25q_spi_status_t: Hardware shift success code.
  */
-w25q_spi_status_t w25q_spi_receive(const w25q_spi_handle_t* hspi, uint8_t* buffer, uint32_t length);
+w25q_spi_status_t w25q_spi_receive(const w25q_spi_handle_t* hspi, uint8_t* buffer, uint32_t length) {
+    w25q_spi_status_t rc = SPI_ERROR_PARAM;
+    uint8_t* buff = buffer;
+    if (hspi != NULL && buffer != NULL) {
+        while (length > 0) {
+            rc = w25q_spi_transfer_byte(hspi, SPI_DUMMY_TRANSMIT,buff++);
+            if (rc != SPI_OK) {
+                break;
+            }
+            length--;
+        }
+        while (hspi->spi->SR & SPI_SR_BSY) {}
+    }
+    return rc;
+
+}
