@@ -52,11 +52,14 @@ w25q_status_t w25q_read_id(w25q_device_t* device, w25q_id_t* id_struct) {
     w25q_spi_cs_assert(device->spi_bus);
     spi_rc = w25q_spi_transmit(device->spi_bus, &cmd, 1);
     if (spi_rc == SPI_OK) {
-        spi_rc = w25q_spi_receive(device->spi_bus, id_buffer, 3);
+        spi_rc = w25q_spi_receive(device->spi_bus, &id_buffer[0], 3);
     } else {
         return W25Q_ERROR_SPI_FAIL;
     }
     w25q_spi_cs_deassert(device->spi_bus);
+    if (spi_rc != SPI_OK) {
+        return W25Q_ERROR_SPI_FAIL;
+    }
     id_struct->manufacturer_id = id_buffer[0];
     id_struct->memory_type_id = id_buffer[1];
     id_struct->capacity_id = id_buffer[2];
