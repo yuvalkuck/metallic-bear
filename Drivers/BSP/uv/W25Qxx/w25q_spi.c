@@ -59,13 +59,17 @@ w25q_spi_status_t w25q_spi_transfer_byte(const w25q_spi_handle_t* hspi, uint8_t 
     uint32_t limitout = SPI_IO_CYCLES_LIMIT;
 
     while (!(hspi->spi->SR & SPI_SR_TXE)) {
-        if (--limitout == 0) return SPI_ERROR_TIMEOUT;
+        if (--limitout == 0) {
+            return SPI_ERROR_TIMEOUT;
+        }
     }
     *dr8 = tx_data;
 
     limitout = SPI_IO_CYCLES_LIMIT;
     while (!(hspi->spi->SR & SPI_SR_RXNE)) {
-        if (--limitout == 0) return SPI_ERROR_TIMEOUT;
+        if (--limitout == 0) {
+            return SPI_ERROR_TIMEOUT;
+        }
     }
     uint8_t received = *dr8;
 
@@ -131,10 +135,11 @@ w25q_spi_status_t w25q_spi_receive(const w25q_spi_handle_t* hspi, uint8_t* buffe
     uint8_t* buff = buffer;
     if (hspi != NULL && buffer != NULL) {
         while (length > 0) {
-            rc = w25q_spi_transfer_byte(hspi, SPI_DUMMY_TRANSMIT,buff++);
+            rc = w25q_spi_transfer_byte(hspi, SPI_DUMMY_TRANSMIT,buff);
             if (rc != SPI_OK) {
                 break;
             }
+            buff++;
             length--;
         }
         while (hspi->spi->SR & SPI_SR_BSY) {}
