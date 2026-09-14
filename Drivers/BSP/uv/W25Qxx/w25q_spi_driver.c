@@ -19,25 +19,6 @@ w25q_spi_status_t w25q_spi_init(const w25q_spi_handle_t* hspi) {
     // order first set what to do in cr2 and then go do it by SPI_CR1_SPE
     hspi->spi->CR2 |= SPI_CR2_FRXTH;
     hspi->spi->CR1 |= SPI_CR1_SPE;
-    /*
-        If ignored the default values of the STM32G4 it should look like this for CR2:
-        // First, unlock everything by disabling the SPI peripheral
-        SPI1->CR1 &= ~SPI_CR1_SPE;
-    
-        // Clear the existing Data Size bits
-        SPI1->CR2 &= ~SPI_CR2_DS;
-        // Tell the hardware: "We want 8-bit transfers" (value 7)
-        SPI1->CR2 |= (7 << SPI_CR2_DS_Pos);
-    
-        // Clear the FIFO Threshold bit
-        SPI1->CR2 &= ~SPI_CR2_FRXTH;
-        // Tell the hardware: "Raise a flag on 1 byte, not 2 bytes"
-        SPI1->CR2 |= SPI_CR2_FRXTH;
-    
-        // Clear and set the Master Pin Output Enable
-        SPI1->CR2 &= ~SPI_CR2_SSOE;
-        SPI1->CR2 |= SPI_CR2_SSOE;
-        */
 }
 
 /**
