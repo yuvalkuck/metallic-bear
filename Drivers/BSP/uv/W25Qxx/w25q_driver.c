@@ -2,10 +2,13 @@
 // Created by uv on 23/08/2026.
 //
 
-
-
 #include "w25q_spi.h" // Links high-level protocols to the SPI abstraction layer
 #include "w25q_driver.h" // Links high-level protocols to the SPI abstraction layer
+
+#include <stddef.h>
+#define WINBOND_MANUFACTURER_ID    0xEFU
+#define WINBOND_MEMORY_TYPE_128MB  0x40U
+#define WINBOND_CAPACITY_128MB     0x18U
 
 /* --- Core Flash Protocol API Methods --- */
 
@@ -15,7 +18,21 @@
  * @param  spi_bus: Assigned lower-level hardware peripheral reference block.
  * @retval w25q_status_t: Device link verification state outcome.
  */
-w25q_status_t w25q_init(w25q_device_t *device, const w25q_spi_handle_t *spi_bus) {
+w25q_status_t w25q_init(w25q_device_t* device, const w25q_spi_handle_t* spi_bus) {
+    device->spi_bus = spi_bus;
+    device->is_initialized = 0;
+    w25q_id_t id_struct;
+    const w25q_status_t rc = w25q_read_id(device, &id_struct);
+    if (rc != W25Q_OK) {
+        return rc;
+    }
+    if (id_struct.manufacturer_id != WINBOND_MANUFACTURER_ID ||
+        id_struct.memory_type_id != WINBOND_MEMORY_TYPE_128MB ||
+        id_struct.capacity_id != WINBOND_CAPACITY_128MB) {
+        return W25Q_ERROR_ID_MISMATCH;
+    }
+    device->is_initialized = 1;
+    return W25Q_OK;
 }
 
 /**
@@ -24,7 +41,27 @@ w25q_status_t w25q_init(w25q_device_t *device, const w25q_spi_handle_t *spi_bus)
  * @param  id_struct: Destination to populate with JEDEC output properties.
  * @retval w25q_status_t: SPI physical response state code.
  */
-w25q_status_t w25q_read_id(w25q_device_t *device, w25q_id_t *id_struct);
+w25q_status_t w25q_read_id(w25q_device_t* device, w25q_id_t* id_struct) {
+    if (device == NULL || device->spi_bus == NULL || id_struct == NULL) {
+        return W25Q_ERROR_SPI_FAIL;
+    }
+    uint8_t cmd = W25Q_CMD_JEDEC_ID;
+    uint8_t id_buffer[3] = {0};
+    w25q_spi_status_t spi_rc;
+
+    w25q_spi_cs_assert(device->spi_bus);
+    spi_rc = w25q_spi_transmit(device->spi_bus, &cmd, 1);
+    if (spi_rc == SPI_OK) {
+        spi_rc = w25q_spi_receive(device->spi_bus, id_buffer, 3);
+    } else {
+        return W25Q_ERROR_SPI_FAIL;
+    }
+    w25q_spi_cs_deassert(device->spi_bus);
+    id_struct->manufacturer_id = id_buffer[0];
+    id_struct->memory_type_id = id_buffer[1];
+    id_struct->capacity_id = id_buffer[2];
+    return W25Q_OK;
+}
 
 /**
  * @brief  Queries and updates internal write protection or internal execution latch variables.
@@ -33,21 +70,21 @@ w25q_status_t w25q_read_id(w25q_device_t *device, w25q_id_t *id_struct);
  * @param  reg_value: Output storage register byte layout pointer.
  * @retval w25q_status_t: Execution outcome loop feedback state.
  */
-w25q_status_t w25q_get_status_reg(w25q_device_t *device, uint8_t reg_number, uint8_t *reg_value);
+w25q_status_t w25q_get_status_reg(w25q_device_t* device, uint8_t reg_number, uint8_t* reg_value);
 
 /**
  * @brief  Instructs the device to accept array write logic commands.
  * @param  device: Pointer to active device object.
  * @retval w25q_status_t: Action acknowledgment.
  */
-w25q_status_t w25q_write_enable(w25q_device_t *device);
+w25q_status_t w25q_write_enable(w25q_device_t* device);
 
 /**
  * @brief  Polls the chip's internal logic structures continuously until an operation concludes.
  * @param  device: Pointer to active device object.
  * @retval w25q_status_t: Completion status state.
  */
-w25q_status_t w25q_wait_busy(w25q_device_t *device);
+w25q_status_t w25q_wait_busy(w25q_device_t* device);
 
 /**
  * @brief  Clears specific address segments back to uninitialized 0xFF values.
@@ -56,7 +93,7 @@ w25q_status_t w25q_wait_busy(w25q_device_t *device);
  * @param  size_type: Choice structural mask indicating specific erase block sizing.
  * @retval w25q_status_t: Command validation state indicator.
  */
-w25q_status_t w25q_erase(w25q_device_t *device, uint32_t address, w25q_erase_size_t size_type);
+w25q_status_t w25q_erase(w25q_device_t* device, uint32_t address, w25q_erase_size_t size_type);
 
 /**
  * @brief  Streams data fragments into targeted flash destination boundaries.
@@ -67,7 +104,7 @@ w25q_status_t w25q_erase(w25q_device_t *device, uint32_t address, w25q_erase_siz
  * @param  length: Combined memory payload array bounds data allocation.
  * @retval w25q_status_t: Complete internal execution confirmation code.
  */
-w25q_status_t w25q_write(w25q_device_t *device, uint32_t address, const uint8_t *buffer, uint32_t length);
+w25q_status_t w25q_write(w25q_device_t* device, uint32_t address, const uint8_t* buffer, uint32_t length);
 
 /**
  * @brief  Gathers persistent data arrays continuously from targeted source pointers.
@@ -77,5 +114,4 @@ w25q_status_t w25q_write(w25q_device_t *device, uint32_t address, const uint8_t 
  * @param  length: Total bytes requested to fetch.
  * @retval w25q_status_t: Execution state return tracking properties.
  */
-w25q_status_t w25q_read(w25q_device_t *device, uint32_t address, uint8_t *buffer, uint32_t length);
-
+w25q_status_t w25q_read(w25q_device_t* device, uint32_t address, uint8_t* buffer, uint32_t length);
