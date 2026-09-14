@@ -4,7 +4,7 @@
 
 
 
-#include "w25q_spi_driver.h" // Links high-level protocols to the SPI abstraction layer
+#include "w25q_spi.h" // Links high-level protocols to the SPI abstraction layer
 #include "w25q_driver.h" // Links high-level protocols to the SPI abstraction layer
 
 /* --- Core Flash Protocol API Methods --- */

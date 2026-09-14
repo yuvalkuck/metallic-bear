@@ -6,7 +6,6 @@
 #define BEARMETAL_W25Q_DRIVER_H
 
 #include <stdint.h>
-#include "w25q_spi_driver.h" // Links high-level protocols to the SPI abstraction layer
 
 /* --- Flash Operation Status Codes --- */
 typedef enum {
