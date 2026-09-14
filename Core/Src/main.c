@@ -261,7 +261,7 @@ static void MX_GPIO_Init(void)
   LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOB);
 
   /**/
-  LL_GPIO_SetOutputPin(W25Q_CS_GPIO_Port, W25Q_CS_Pin);
+  LL_GPIO_ResetOutputPin(W25Q_CS_GPIO_Port, W25Q_CS_Pin);
 
   /**/
   GPIO_InitStruct.Pin = LPUART1_TX_Pin;
