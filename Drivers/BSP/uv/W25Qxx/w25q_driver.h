@@ -15,9 +15,15 @@ typedef enum {
     W25Q_ERROR_BOUNDARY      = 0x03,
     W25Q_ERROR_TIMEOUT       = 0x04,
     W25Q_ERROR_WRITE_PROTECT = 0x05,
-    W25Q_ERROR_NOT_IMPLEMENT = 0x06
+    W25Q_ERROR_PARAM         = 0x06,
+    W25Q_ERROR_NOT_IMPLEMENT = 0x07
 } w25q_status_t;
 
+typedef enum {
+    W25Q_SR1 = 1,
+    W25Q_SR2 = 2,
+    W25Q_SR3 = 3
+} w25q_sr_number_t;
 /* --- Status Register 1 Bitmap (0x05) --- */
 #define W25Q_SR1_BUSY   (1U << 0)  /* Erase/Write In Progress */
 #define W25Q_SR1_WEL    (1U << 1)  /* Write Enable Latch */
@@ -95,7 +101,7 @@ w25q_status_t w25q_read_id(w25q_device_t *device, w25q_id_t *id_struct);
  * @param  reg_value: Output storage register byte layout pointer.
  * @retval w25q_status_t: Execution outcome loop feedback state.
  */
-w25q_status_t w25q_get_status_reg(w25q_device_t *device, uint8_t reg_number, uint8_t *reg_value);
+w25q_status_t w25q_get_status_reg(w25q_device_t *device, w25q_sr_number_t reg_number, uint8_t *reg_value);
 
 /**
  * @brief  Instructs the device to accept array write logic commands.

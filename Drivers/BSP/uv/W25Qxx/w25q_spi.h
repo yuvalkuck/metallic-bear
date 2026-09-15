@@ -24,6 +24,9 @@ typedef struct {
     uint16_t       cs_pin;       /* GPIO Pin for Chip Select (e.g., GPIO_BSRR_BS_4) */
 } w25q_spi_handle_t;
 
+#define SPI_DUMMY_RECEIVE 0x00
+#define SPI_DUMMY_TRANSMIT 0xFF
+
 typedef enum {
     /* Write Control Commands */
     W25Q_CMD_WRITE_ENABLE              = 0x06, // Sets WEL bit

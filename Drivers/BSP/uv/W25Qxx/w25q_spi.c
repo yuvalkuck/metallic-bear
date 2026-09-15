@@ -7,8 +7,6 @@
 #include <stddef.h>
 
 #define SPI_IO_CYCLES_LIMIT 100000U
-#define SPI_DUMMY_RECEIVE 0x00
-#define SPI_DUMMY_TRANSMIT 0xFF
 
 
 /* --- Core SPI Peripheral API Methods --- */

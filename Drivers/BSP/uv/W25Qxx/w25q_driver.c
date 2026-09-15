@@ -73,8 +73,35 @@ w25q_status_t w25q_read_id(w25q_device_t* device, w25q_id_t* id_struct) {
  * @param  reg_value: Output storage register byte layout pointer.
  * @retval w25q_status_t: Execution outcome loop feedback state.
  */
-w25q_status_t w25q_get_status_reg(w25q_device_t* device, uint8_t reg_number, uint8_t* reg_value) {
-    return W25Q_ERROR_NOT_IMPLEMENT;
+
+w25q_status_t w25q_get_status_reg(w25q_device_t* device, w25q_sr_number_t reg_number, uint8_t* reg_value) {
+    uint8_t sr_id = 0;
+    if (device == NULL || device->spi_bus == NULL || reg_value == NULL) {
+        return W25Q_ERROR_PARAM;
+    }
+    switch (reg_number) {
+        case W25Q_SR1:
+            sr_id = W25Q_CMD_READ_STATUS_REG1;
+            break;
+        case W25Q_SR2:
+            sr_id = W25Q_CMD_READ_STATUS_REG2;
+            break;
+        case W25Q_SR3:
+            sr_id = W25Q_CMD_READ_STATUS_REG3;
+            break;
+        default:
+            return W25Q_ERROR_PARAM;
+    }
+    w25q_spi_cs_assert(device->spi_bus);
+    w25q_spi_status_t rc = w25q_spi_transfer_byte(device->spi_bus, sr_id, SPI_DUMMY_RECEIVE);
+    if (rc == SPI_OK) {
+        rc = w25q_spi_transfer_byte(device->spi_bus, SPI_DUMMY_TRANSMIT, reg_value);
+    }
+    w25q_spi_cs_deassert(device->spi_bus);
+    if (rc != SPI_OK) {
+        return W25Q_ERROR_SPI_FAIL;
+    }
+    return W25Q_OK;
 }
 
 /**
@@ -82,7 +109,7 @@ w25q_status_t w25q_get_status_reg(w25q_device_t* device, uint8_t reg_number, uin
  * @param  device: Pointer to active device object.
  * @retval w25q_status_t: Action acknowledgment.
  */
-w25q_status_t w25q_write_enable(w25q_device_t* device){
+w25q_status_t w25q_write_enable(w25q_device_t* device) {
     return W25Q_ERROR_NOT_IMPLEMENT;
 }
 
@@ -91,7 +118,7 @@ w25q_status_t w25q_write_enable(w25q_device_t* device){
  * @param  device: Pointer to active device object.
  * @retval w25q_status_t: Completion status state.
  */
-w25q_status_t w25q_wait_busy(w25q_device_t* device){
+w25q_status_t w25q_wait_busy(w25q_device_t* device) {
     return W25Q_ERROR_NOT_IMPLEMENT;
 }
 
@@ -102,7 +129,7 @@ w25q_status_t w25q_wait_busy(w25q_device_t* device){
  * @param  size_type: Choice structural mask indicating specific erase block sizing.
  * @retval w25q_status_t: Command validation state indicator.
  */
-w25q_status_t w25q_erase(w25q_device_t* device, uint32_t address, w25q_erase_size_t size_type){
+w25q_status_t w25q_erase(w25q_device_t* device, uint32_t address, w25q_erase_size_t size_type) {
     return W25Q_ERROR_NOT_IMPLEMENT;
 }
 
@@ -115,7 +142,7 @@ w25q_status_t w25q_erase(w25q_device_t* device, uint32_t address, w25q_erase_siz
  * @param  length: Combined memory payload array bounds data allocation.
  * @retval w25q_status_t: Complete internal execution confirmation code.
  */
-w25q_status_t w25q_write(w25q_device_t* device, uint32_t address, const uint8_t* buffer, uint32_t length){
+w25q_status_t w25q_write(w25q_device_t* device, uint32_t address, const uint8_t* buffer, uint32_t length) {
     return W25Q_ERROR_NOT_IMPLEMENT;
 }
 
@@ -127,6 +154,6 @@ w25q_status_t w25q_write(w25q_device_t* device, uint32_t address, const uint8_t*
  * @param  length: Total bytes requested to fetch.
  * @retval w25q_status_t: Execution state return tracking properties.
  */
-w25q_status_t w25q_read(w25q_device_t* device, uint32_t address, uint8_t* buffer, uint32_t length){
+w25q_status_t w25q_read(w25q_device_t* device, uint32_t address, uint8_t* buffer, uint32_t length) {
     return W25Q_ERROR_NOT_IMPLEMENT;
 }
