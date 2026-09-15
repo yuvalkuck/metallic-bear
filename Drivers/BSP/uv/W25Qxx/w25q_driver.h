@@ -14,7 +14,8 @@ typedef enum {
     W25Q_ERROR_ID_MISMATCH   = 0x02,
     W25Q_ERROR_BOUNDARY      = 0x03,
     W25Q_ERROR_TIMEOUT       = 0x04,
-    W25Q_ERROR_WRITE_PROTECT = 0x05
+    W25Q_ERROR_WRITE_PROTECT = 0x05,
+    W25Q_ERROR_NOT_IMPLEMENT = 0x06
 } w25q_status_t;
 
 /* --- Status Register 1 Bitmap (0x05) --- */
