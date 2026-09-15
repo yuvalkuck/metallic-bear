@@ -105,20 +105,20 @@ w25q_status_t w25q_get_status_reg(w25q_device_t* device, w25q_sr_number_t reg_nu
 }
 
 /**
- * @brief  Instructs the device to accept array write logic commands.
- * @param  device: Pointer to active device object.
- * @retval w25q_status_t: Action acknowledgment.
- */
-w25q_status_t w25q_write_enable(w25q_device_t* device) {
-    return W25Q_ERROR_NOT_IMPLEMENT;
-}
-
-/**
  * @brief  Polls the chip's internal logic structures continuously until an operation concludes.
  * @param  device: Pointer to active device object.
  * @retval w25q_status_t: Completion status state.
  */
 w25q_status_t w25q_wait_busy(w25q_device_t* device) {
+    return W25Q_ERROR_NOT_IMPLEMENT;
+}
+
+/**
+ * @brief  Instructs the device to accept array write logic commands.
+ * @param  device: Pointer to active device object.
+ * @retval w25q_status_t: Action acknowledgment.
+ */
+w25q_status_t w25q_write_enable(w25q_device_t* device) {
     return W25Q_ERROR_NOT_IMPLEMENT;
 }
 
