@@ -17,6 +17,36 @@ typedef enum {
     W25Q_ERROR_WRITE_PROTECT = 0x05
 } w25q_status_t;
 
+/* --- Status Register 1 Bitmap (0x05) --- */
+#define W25Q_SR1_BUSY   (1U << 0)  /* Erase/Write In Progress */
+#define W25Q_SR1_WEL    (1U << 1)  /* Write Enable Latch */
+#define W25Q_SR1_BP0    (1U << 2)  /* Block Protect bit 0 */
+#define W25Q_SR1_BP1    (1U << 3)  /* Block Protect bit 1 */
+#define W25Q_SR1_BP2    (1U << 4)  /* Block Protect bit 2 */
+#define W25Q_SR1_TB     (1U << 5)  /* Top/Bottom Protect */
+#define W25Q_SR1_SEC    (1U << 6)  /* Sector/Block Protect */
+#define W25Q_SR1_SRP0   (1U << 7)  /* Status Register Protect 0 */
+
+/* --- Status Register 2 Bitmap (0x35) --- */
+#define W25Q_SR2_SRP1   (1U << 0)  /* Status Register Protect 1 */
+#define W25Q_SR2_QE     (1U << 1)  /* Quad Enable */
+#define W25Q_SR2_RSVD   (1U << 2)  /* Reserved */
+#define W25Q_SR2_LB1    (1U << 3)  /* Security Register Lock Bit 1 */
+#define W25Q_SR2_LB2    (1U << 4)  /* Security Register Lock Bit 2 */
+#define W25Q_SR2_LB3    (1U << 5)  /* Security Register Lock Bit 3 */
+#define W25Q_SR2_CMP    (1U << 6)  /* Complement Protect */
+#define W25Q_SR2_SUS    (1U << 7)  /* Erase/Program Suspend Status */
+
+/* --- Status Register 3 Bitmap (0x15) --- */
+#define W25Q_SR3_ADS      (1U << 0) /* Current Address Mode (0=3-Byte, 1=4-Byte) */
+#define W25Q_SR3_ADP      (1U << 1) /* Power-Up Address Mode */
+#define W25Q_SR3_WPS      (1U << 2) /* Write Protect Selection */
+#define W25Q_SR3_RSVD1    (1U << 3) /* Reserved */
+#define W25Q_SR3_RSVD2    (1U << 4) /* Reserved */
+#define W25Q_SR3_DRV0     (1U << 5) /* Output Driver Strength bit 0 */
+#define W25Q_SR3_DRV1     (1U << 6) /* Output Driver Strength bit 1 */
+#define W25Q_SR3_HOLD_RST (1U << 7) /* /HOLD or /RESET pin function */
+
 /* --- Memory Block Erase Sizing Options --- */
 typedef enum {
     W25Q_ERASE_SECTOR_4KB  = 0x20,
