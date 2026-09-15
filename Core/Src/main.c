@@ -237,7 +237,10 @@ static void MX_SPI1_Init(void)
   LL_SPI_SetStandard(SPI1, LL_SPI_PROTOCOL_MOTOROLA);
   LL_SPI_EnableNSSPulseMgt(SPI1);
   /* USER CODE BEGIN SPI1_Init 2 */
-
+    /* CS is software/GPIO managed and held low across multi-byte transfers;
+       NSSP would stall RXNE after the first frame waiting for a CS pulse
+       that never comes, so undo the generator's default here. */
+    LL_SPI_DisableNSSPulseMgt(SPI1);
   /* USER CODE END SPI1_Init 2 */
 
 }

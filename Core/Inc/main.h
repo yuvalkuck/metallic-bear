@@ -83,8 +83,8 @@ void Error_Handler(void);
 #define LPUART1_TX_GPIO_Port GPIOA
 #define LPUART1_RX_Pin LL_GPIO_PIN_3
 #define LPUART1_RX_GPIO_Port GPIOA
-#define W25Q_CS_Pin LL_GPIO_PIN_4
-#define W25Q_CS_GPIO_Port GPIOA
+#define W25Q_CS_Pin LL_GPIO_PIN_0
+#define W25Q_CS_GPIO_Port GPIOB
 #define T_SWDIO_Pin LL_GPIO_PIN_13
 #define T_SWDIO_GPIO_Port GPIOA
 #define T_SWCLK_Pin LL_GPIO_PIN_14
