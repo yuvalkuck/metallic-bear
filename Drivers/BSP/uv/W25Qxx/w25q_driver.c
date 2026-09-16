@@ -105,6 +105,32 @@ w25q_status_t w25q_get_status_reg(w25q_device_t* device, w25q_sr_number_t reg_nu
 }
 
 /**
+ * @brief  Gathers persistent data arrays continuously from targeted source pointers.
+ * @param  device: Pointer to active device object.
+ * @param  address: Target memory start data collection pointer.
+ * @param  buffer: Output destination RAM buffer array target.
+ * @param  length: Total bytes requested to fetch.
+ * @retval w25q_status_t: Execution state return tracking properties.
+ */
+w25q_status_t w25q_read(w25q_device_t* device, uint32_t address, uint8_t* buffer, uint32_t length) {
+    w25q_frame_t frame;
+    if (device == NULL || device->spi_bus == NULL || buffer == NULL) {
+        return W25Q_ERROR_PARAM;
+    }
+    if (length == 1) {
+        return W25Q_OK;
+    }
+    W25Q_PACK_FRAME_HW(&frame, W25Q_CMD_READ_DATA, address);
+    w25q_spi_cs_assert(device->spi_bus);
+    w25q_spi_status_t rc = w25q_spi_transmit(device->spi_bus, frame.bytes, W25Q_FRAME_UINT8_SIZE);
+    if (rc == SPI_OK) {
+        rc = w25q_spi_receive(device->spi_bus, buffer, length);
+    }
+    w25q_spi_cs_deassert(device->spi_bus);
+    return (rc == SPI_OK) ? W25Q_OK : W25Q_ERROR_SPI_FAIL;
+}
+
+/**
  * @brief  Polls the chip's internal logic structures continuously until an operation concludes.
  * @param  device: Pointer to active device object.
  * @retval w25q_status_t: Completion status state.
@@ -143,17 +169,5 @@ w25q_status_t w25q_erase(w25q_device_t* device, uint32_t address, w25q_erase_siz
  * @retval w25q_status_t: Complete internal execution confirmation code.
  */
 w25q_status_t w25q_write(w25q_device_t* device, uint32_t address, const uint8_t* buffer, uint32_t length) {
-    return W25Q_ERROR_NOT_IMPLEMENT;
-}
-
-/**
- * @brief  Gathers persistent data arrays continuously from targeted source pointers.
- * @param  device: Pointer to active device object.
- * @param  address: Target memory start data collection pointer.
- * @param  buffer: Output destination RAM buffer array target.
- * @param  length: Total bytes requested to fetch.
- * @retval w25q_status_t: Execution state return tracking properties.
- */
-w25q_status_t w25q_read(w25q_device_t* device, uint32_t address, uint8_t* buffer, uint32_t length) {
     return W25Q_ERROR_NOT_IMPLEMENT;
 }

@@ -16,7 +16,7 @@ typedef enum {
     W25Q_ERROR_TIMEOUT       = 0x04,
     W25Q_ERROR_WRITE_PROTECT = 0x05,
     W25Q_ERROR_PARAM         = 0x06,
-    W25Q_ERROR_NOT_IMPLEMENT = 0x07
+    W25Q_ERROR_NOT_IMPLEMENT = 0x0A
 } w25q_status_t;
 
 typedef enum {

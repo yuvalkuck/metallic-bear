@@ -27,6 +27,26 @@ typedef struct {
 #define SPI_DUMMY_RECEIVE 0x00
 #define SPI_DUMMY_TRANSMIT 0xFF
 
+#define W25Q_FRAME_UINT8_SIZE 4
+typedef union {
+    uint32_t val;
+    uint8_t  bytes[W25Q_FRAME_UINT8_SIZE];
+} w25q_frame_t;
+
+
+/**
+ * @brief  Packs a 1-byte command and a 24-bit address into a 4-byte destination frame
+ *         using hardware byte reversal (__REV) and direct union manipulation.
+ * @param  dest_frame_ptr: Pointer to a `w25q_frame_t` type object.
+ * @param  cmd:            The 8-bit instruction command (e.g., W25Q_CMD_READ_DATA).
+ * @param  addr:           The 32-bit source address variable.
+ */
+#define W25Q_PACK_FRAME_HW(dest_frame_ptr, cmd, addr)                       \
+    do {                                                                    \
+        (dest_frame_ptr)->val = __REV(addr);                                \
+        (dest_frame_ptr)->bytes[0] = (uint8_t)((cmd) & 0xFFU);              \
+    } while(0)
+
 typedef enum {
     /* Write Control Commands */
     W25Q_CMD_WRITE_ENABLE              = 0x06, // Sets WEL bit
