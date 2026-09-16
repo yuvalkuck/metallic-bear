@@ -135,7 +135,7 @@ w25q_status_t w25q_read(w25q_device_t* device, uint32_t address, uint8_t* buffer
  * @param  device: Pointer to active device object.
  * @retval w25q_status_t: Completion status state.
  */
-w25q_status_t w25q_wait_busy(w25q_device_t* device) {
+static w25q_status_t w25q_wait_busy(w25q_device_t* device) {
     return W25Q_ERROR_NOT_IMPLEMENT;
 }
 
@@ -144,7 +144,7 @@ w25q_status_t w25q_wait_busy(w25q_device_t* device) {
  * @param  device: Pointer to active device object.
  * @retval w25q_status_t: Action acknowledgment.
  */
-w25q_status_t w25q_write_enable(w25q_device_t* device) {
+static w25q_status_t w25q_write_enable(w25q_device_t* device) {
     return W25Q_ERROR_NOT_IMPLEMENT;
 }
 

@@ -104,20 +104,6 @@ w25q_status_t w25q_read_id(w25q_device_t *device, w25q_id_t *id_struct);
 w25q_status_t w25q_get_status_reg(w25q_device_t *device, w25q_sr_number_t reg_number, uint8_t *reg_value);
 
 /**
- * @brief  Instructs the device to accept array write logic commands.
- * @param  device: Pointer to active device object.
- * @retval w25q_status_t: Action acknowledgment.
- */
-w25q_status_t w25q_write_enable(w25q_device_t *device);
-
-/**
- * @brief  Polls the chip's internal logic structures continuously until an operation concludes.
- * @param  device: Pointer to active device object.
- * @retval w25q_status_t: Completion status state.
- */
-w25q_status_t w25q_wait_busy(w25q_device_t *device);
-
-/**
  * @brief  Clears specific address segments back to uninitialized 0xFF values.
  * @param  device: Pointer to active device object.
  * @param  address: Start address matching sector/block geometry offsets.
