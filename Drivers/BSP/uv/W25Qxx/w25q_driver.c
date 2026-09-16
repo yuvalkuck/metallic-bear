@@ -23,6 +23,7 @@ static uint32_t w25q_get_tick_ms(void) {
     }
     return ms_ticks;
 }
+
 /* --- Core Flash Protocol API Methods --- */
 
 /**
@@ -163,7 +164,6 @@ static w25q_status_t w25q_wait_busy(w25q_device_t* device, uint32_t timeout_ms) 
             w25q_spi_cs_deassert(device->spi_bus);
             return W25Q_ERROR_TIMEOUT;
         }
-
     } while ((reg_value & W25Q_SR1_BUSY) != 0x00U);
 
     w25q_spi_cs_deassert(device->spi_bus);
@@ -175,8 +175,16 @@ static w25q_status_t w25q_wait_busy(w25q_device_t* device, uint32_t timeout_ms) 
  * @param  device: Pointer to active device object.
  * @retval w25q_status_t: Action acknowledgment.
  */
-static w25q_status_t w25q_write_enable(w25q_device_t* device) {
-    return W25Q_ERROR_NOT_IMPLEMENT;
+static w25q_status_t w25q_write_enable(w25q_device_t* device, uint8_t enable) {
+    w25q_spi_status_t rc;
+    w25q_spi_cs_assert(device->spi_bus);
+    if (enable) {
+        rc = w25q_spi_transfer_byte(device->spi_bus, W25Q_CMD_WRITE_ENABLE, SPI_DUMMY_RECEIVE);
+    } else {
+        rc = w25q_spi_transfer_byte(device->spi_bus, W25Q_CMD_WRITE_DISABLE, SPI_DUMMY_RECEIVE);
+    }
+    w25q_spi_cs_deassert(device->spi_bus);
+    return (rc == SPI_OK) ? W25Q_OK : W25Q_ERROR_SPI_FAIL;
 }
 
 /**
