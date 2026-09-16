@@ -10,6 +10,19 @@
 #define WINBOND_MEMORY_TYPE_128MB  0x40U
 #define WINBOND_CAPACITY_128MB     0x18U
 
+/**
+ * @brief  Captures a running 32-bit millisecond baseline from SysTick hardware.
+ *         Assumes SysTick is configured to cycle at a 1ms frequency.
+ */
+static uint32_t w25q_get_tick_ms(void) {
+    static volatile uint32_t ms_ticks = 0;
+
+    // Check the standardized CMSIS flag mask directly on the control pointer
+    if (SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) {
+        ms_ticks++;
+    }
+    return ms_ticks;
+}
 /* --- Core Flash Protocol API Methods --- */
 
 /**
@@ -135,8 +148,26 @@ w25q_status_t w25q_read(w25q_device_t* device, uint32_t address, uint8_t* buffer
  * @param  device: Pointer to active device object.
  * @retval w25q_status_t: Completion status state.
  */
-static w25q_status_t w25q_wait_busy(w25q_device_t* device) {
-    return W25Q_ERROR_NOT_IMPLEMENT;
+static w25q_status_t w25q_wait_busy(w25q_device_t* device, uint32_t timeout_ms) {
+    uint8_t reg_value = 0;
+    uint32_t start_tick = w25q_get_tick_ms();
+
+    w25q_spi_cs_assert(device->spi_bus);
+    w25q_spi_transfer_byte(device->spi_bus, W25Q_CMD_READ_STATUS_REG1, SPI_DUMMY_RECEIVE);
+
+    do {
+        w25q_spi_transfer_byte(device->spi_bus, SPI_DUMMY_TRANSMIT, &reg_value);
+
+        // Handle unsigned integer rollover safety checks automatically
+        if ((w25q_get_tick_ms() - start_tick) >= timeout_ms) {
+            w25q_spi_cs_deassert(device->spi_bus);
+            return W25Q_ERROR_TIMEOUT;
+        }
+
+    } while ((reg_value & W25Q_SR1_BUSY) != 0x00U);
+
+    w25q_spi_cs_deassert(device->spi_bus);
+    return W25Q_OK;
 }
 
 /**
