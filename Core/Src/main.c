@@ -22,8 +22,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <string.h>
-#include "w25q_spi.h"
 #include "w25q_driver.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -32,6 +32,9 @@ volatile w25q_status_t g_w25q_last_error = W25Q_OK;
 w25q_spi_handle_t w25q_spi3 = {
     SPI3,W25Q_CS_GPIO_Port, W25Q_CS_Pin
 };
+// bme688_i2c_handle_t bme688_i2c2 = {
+//   I2C2
+// };
 w25q_device_t w25q_device = {};
 /* USER CODE END PTD */
 

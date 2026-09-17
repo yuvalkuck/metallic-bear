@@ -1,10 +1,9 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.22)
 SET(LIB_NAME w25qxx)
 
-
-
 ENABLE_LANGUAGE(C)
 SET(LIBRARY_NAME "${LIB_NAME}_Driver")
+MESSAGE(STATUS "Load ${LIBRARY_NAME}")
 
 # Interface library for includes and symbols
 # Create STM32_Drivers static library
