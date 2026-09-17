@@ -1,0 +1,4 @@
+#ifndef BEARMETAL_BME688_I2C_H
+#define BEARMETAL_BME688_I2C_H
+
+#endif

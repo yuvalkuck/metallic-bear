@@ -14,6 +14,8 @@ TARGET_INCLUDE_DIRECTORIES(${LIBRARY_NAME} PUBLIC
 )
 
 TARGET_SOURCES(${LIBRARY_NAME} PRIVATE
+        bme688_driver.c
+        bme688_i2c.c
 )
 
 target_link_libraries(${LIBRARY_NAME} PUBLIC
