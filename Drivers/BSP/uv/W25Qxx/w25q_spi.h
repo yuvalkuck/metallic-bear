@@ -47,6 +47,7 @@ typedef union {
         (dest_frame_ptr)->bytes[0] = (uint8_t)((cmd) & 0xFFU);              \
     } while(0)
 
+
 typedef enum {
     /* Write Control Commands */
     W25Q_CMD_WRITE_ENABLE              = 0x06, // Sets WEL bit

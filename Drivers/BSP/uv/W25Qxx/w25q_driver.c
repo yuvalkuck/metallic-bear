@@ -9,6 +9,7 @@
 #define WINBOND_MANUFACTURER_ID    0xEFU
 #define WINBOND_MEMORY_TYPE_128MB  0x40U
 #define WINBOND_CAPACITY_128MB     0x18U
+#define W25Q_MAX_BUSY_WAIT_MS      (60*1000*100) // 100 seconds
 
 /**
  * @brief  Captures a running 32-bit millisecond baseline from SysTick hardware.
@@ -149,25 +150,32 @@ w25q_status_t w25q_read(w25q_device_t* device, uint32_t address, uint8_t* buffer
  * @param  device: Pointer to active device object.
  * @retval w25q_status_t: Completion status state.
  */
-static w25q_status_t w25q_wait_busy(w25q_device_t* device, uint32_t timeout_ms) {
+static w25q_spi_status_t w25q_wait_busy(w25q_device_t* device, uint32_t timeout_ms) {
     uint8_t reg_value = 0;
     uint32_t start_tick = w25q_get_tick_ms();
 
     w25q_spi_cs_assert(device->spi_bus);
-    w25q_spi_transfer_byte(device->spi_bus, W25Q_CMD_READ_STATUS_REG1, SPI_DUMMY_RECEIVE);
+    w25q_spi_status_t rc = w25q_spi_transfer_byte(device->spi_bus, W25Q_CMD_READ_STATUS_REG1, SPI_DUMMY_RECEIVE);
+    if (rc != SPI_OK) {
+        w25q_spi_cs_deassert(device->spi_bus);
+        return rc;
+    }
 
     do {
-        w25q_spi_transfer_byte(device->spi_bus, SPI_DUMMY_TRANSMIT, &reg_value);
-
+        rc = w25q_spi_transfer_byte(device->spi_bus, SPI_DUMMY_TRANSMIT, &reg_value);
+        if (rc != SPI_OK) {
+            w25q_spi_cs_deassert(device->spi_bus);
+            return rc;
+        }
         // Handle unsigned integer rollover safety checks automatically
         if ((w25q_get_tick_ms() - start_tick) >= timeout_ms) {
             w25q_spi_cs_deassert(device->spi_bus);
-            return W25Q_ERROR_TIMEOUT;
+            return SPI_ERROR_TIMEOUT;
         }
     } while ((reg_value & W25Q_SR1_BUSY) != 0x00U);
 
     w25q_spi_cs_deassert(device->spi_bus);
-    return W25Q_OK;
+    return SPI_OK;
 }
 
 /**
@@ -175,7 +183,7 @@ static w25q_status_t w25q_wait_busy(w25q_device_t* device, uint32_t timeout_ms) 
  * @param  device: Pointer to active device object.
  * @retval w25q_status_t: Action acknowledgment.
  */
-static w25q_status_t w25q_write_enable(w25q_device_t* device, uint8_t enable) {
+static w25q_spi_status_t w25q_write_enable(w25q_device_t* device, uint8_t enable) {
     w25q_spi_status_t rc;
     w25q_spi_cs_assert(device->spi_bus);
     if (enable) {
@@ -184,7 +192,7 @@ static w25q_status_t w25q_write_enable(w25q_device_t* device, uint8_t enable) {
         rc = w25q_spi_transfer_byte(device->spi_bus, W25Q_CMD_WRITE_DISABLE, SPI_DUMMY_RECEIVE);
     }
     w25q_spi_cs_deassert(device->spi_bus);
-    return (rc == SPI_OK) ? W25Q_OK : W25Q_ERROR_SPI_FAIL;
+    return rc;
 }
 
 /**
@@ -194,8 +202,24 @@ static w25q_status_t w25q_write_enable(w25q_device_t* device, uint8_t enable) {
  * @param  size_type: Choice structural mask indicating specific erase block sizing.
  * @retval w25q_status_t: Command validation state indicator.
  */
-w25q_status_t w25q_erase(w25q_device_t* device, uint32_t address, w25q_erase_size_t size_type) {
-    return W25Q_ERROR_NOT_IMPLEMENT;
+w25q_status_t w25q_erase(w25q_device_t* device, uint32_t address, w25q_erase_cmd_t size_type) {
+    if (w25q_wait_busy(device,W25Q_MAX_BUSY_WAIT_MS) != SPI_OK) {
+        return W25Q_ERROR_TIMEOUT;
+    }
+    if (w25q_write_enable(device, 1) != SPI_OK) {
+        return W25Q_ERROR_TIMEOUT;
+    }
+    w25q_spi_cs_assert(device->spi_bus);
+    if (size_type == W25Q_ERASE_CHIP) {
+        w25q_spi_transfer_byte(device->spi_bus, size_type, SPI_DUMMY_RECEIVE);
+    } else {
+        w25q_frame_t frame;
+        W25Q_PACK_FRAME_HW(&frame, size_type, address);
+        w25q_spi_transmit(device->spi_bus, frame.bytes, W25Q_FRAME_UINT8_SIZE);
+    }
+    w25q_spi_cs_deassert(device->spi_bus);
+    w25q_wait_busy(device,W25Q_MAX_BUSY_WAIT_MS);
+    return W25Q_OK;
 }
 
 /**
@@ -208,5 +232,6 @@ w25q_status_t w25q_erase(w25q_device_t* device, uint32_t address, w25q_erase_siz
  * @retval w25q_status_t: Complete internal execution confirmation code.
  */
 w25q_status_t w25q_write(w25q_device_t* device, uint32_t address, const uint8_t* buffer, uint32_t length) {
+    
     return W25Q_ERROR_NOT_IMPLEMENT;
 }

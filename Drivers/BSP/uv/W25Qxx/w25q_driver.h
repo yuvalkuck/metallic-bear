@@ -6,6 +6,7 @@
 #define BEARMETAL_W25Q_DRIVER_H
 
 #include <stdint.h>
+#include "w25q_spi.h"
 
 /* --- Flash Operation Status Codes --- */
 typedef enum {
@@ -24,6 +25,7 @@ typedef enum {
     W25Q_SR2 = 2,
     W25Q_SR3 = 3
 } w25q_sr_number_t;
+
 /* --- Status Register 1 Bitmap (0x05) --- */
 #define W25Q_SR1_BUSY   (1U << 0)  /* Erase/Write In Progress */
 #define W25Q_SR1_WEL    (1U << 1)  /* Write Enable Latch */
@@ -55,12 +57,16 @@ typedef enum {
 #define W25Q_SR3_HOLD_RST (1U << 7) /* /HOLD or /RESET pin function */
 
 /* --- Memory Block Erase Sizing Options --- */
+/**
+ * @brief W25Q128 Hardware Erase Command Opcodes
+ * @note Implements hardware-level bitmasking parameters for physical memory cell reset.
+ */
 typedef enum {
-    W25Q_ERASE_SECTOR_4KB  = 0x20,
-    W25Q_ERASE_BLOCK_32KB  = 0x52,
-    W25Q_ERASE_BLOCK_64KB  = 0xD8,
-    W25Q_ERASE_CHIP        = 0xC7
-} w25q_erase_size_t;
+    W25Q_ERASE_SECTOR = W25Q_CMD_SECTOR_ERASE_4KB,
+    W25Q_ERASE_BLOCK_32K = W25Q_CMD_BLOCK_ERASE_32KB,
+    W25Q_ERASE_BLOCK_64K = W25Q_CMD_BLOCK_ERASE_64KB,
+    W25Q_ERASE_CHIP = W25Q_CMD_CHIP_ERASE
+} w25q_erase_cmd_t;
 
 /* --- JEDEC Identification Storage Struct --- */
 typedef struct {
@@ -110,7 +116,7 @@ w25q_status_t w25q_get_status_reg(w25q_device_t *device, w25q_sr_number_t reg_nu
  * @param  size_type: Choice structural mask indicating specific erase block sizing.
  * @retval w25q_status_t: Command validation state indicator.
  */
-w25q_status_t w25q_erase(w25q_device_t *device, uint32_t address, w25q_erase_size_t size_type);
+w25q_status_t w25q_erase(w25q_device_t *device, uint32_t address, w25q_erase_cmd_t size_type);
 
 /**
  * @brief  Streams data fragments into targeted flash destination boundaries.
