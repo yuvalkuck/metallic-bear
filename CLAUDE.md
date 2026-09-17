@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 MetallicBear (formerly "EnviLogger") is a bare-metal (no RTOS) firmware project for the NUCLEO-G474RE board (STM32G474RET6, Cortex-M4 @ 170 MHz). It's a learning project: an automotive cabin air-quality monitor that reads CO (MQ7), CO2/RH/temp (SCD30), IAQ gas (BME688), logs to external SPI NOR flash (W25Q128), and streams debug output over a Virtual COM Port. Design doc: the project `README.md` (system architecture, hardware module interface mapping, driver learning roadmap). There is no separate `doc/` directory in this repo.
 
 Drivers are built in a deliberate sequence, from simplest bus to most complex:
-1. **W25Q128 flash (SPI1)** — in progress (see `Drivers/BSP/uv/W25Qxx/`)
+1. **W25Q128 flash (SPI3)** — in progress (see `Drivers/BSP/uv/W25Qxx/`)
 2. **BME688 (I2C1)** — not started
 3. **SCD30 (USART1 + DMA, Modbus RTU/CRC16)** — not started
 4. **MQ7 (ADC1 + TIM1 PWM)** — not started
@@ -15,7 +15,7 @@ Drivers are built in a deliberate sequence, from simplest bus to most complex:
 Hardware pin map:
 | Peripheral | Pins | Purpose |
 |---|---|---|
-| SPI1 | PA5 CLK, PA6 MISO, PA7 MOSI, PB0 CS (soft NSS, GPIO output labeled `W25Q_CS`) | W25Q128 flash |
+| SPI3 | PC10 CLK, PC11 MISO, PC12 MOSI, PB0 CS (soft NSS, GPIO output labeled `W25Q_CS`) | W25Q128 flash |
 | I2C1 | PB8 SCL, PB9 SDA | BME688 |
 | USART1 | PA9 TX, PA10 RX (+ RX DMA, circular) | SCD30 Modbus, 19200 baud |
 | USART2 | PA2 TX, PA3 RX | VCP debug console via ST-LINK, 115200 baud, `printf` redirected here |
@@ -23,9 +23,9 @@ Hardware pin map:
 | TIM1 | PA8 (CH1 PWM) | MQ7 heater drive |
 | EXTI13 | PC13 | User button B1, falling edge |
 
-Note on `W25Q_CS`: it lives on PB0 (Morpho connector), not PA4, despite PA4 being electrically adjacent to the rest of SPI1's pins. This board has no HSE crystal fitted (NUCLEO-64 boards ship with the X3 footprint unpopulated by default), so `SystemClock_Config()` derives the 170 MHz system clock from HSI (16 MHz) through the PLL, not HSE.
+Note on `W25Q_CS`: it lives on PB0 (Morpho connector) rather than on SPI3's hardware NSS pin, since the driver drives chip-select manually as a plain GPIO output. The flash link was originally wired to SPI1 (PA5 CLK, PA6 MISO, PA7 MOSI) but was moved to SPI3 because PA5 conflicts with the NUCLEO-G474RE's onboard LED (LD2), which is hardwired to that pin. This board has no HSE crystal fitted (NUCLEO-64 boards ship with the X3 footprint unpopulated by default), so `SystemClock_Config()` derives the 170 MHz system clock from HSI (16 MHz) through the PLL, not HSE.
 
-On breadboard wiring, SPI1's baud rate prescaler is set to `/64` (~2.66 MHz) rather than the CubeMX-computed max of `/4` (42.5 MHz) — full speed causes signal-integrity failures (garbled/no communication) over jumper wires; verified with a logic analyzer. Revisit this once the driver moves to a proper PCB.
+On breadboard wiring, SPI3's baud rate prescaler is set to `/64` (~2.66 MHz) rather than the CubeMX-computed max of `/4` (42.5 MHz) — full speed causes signal-integrity failures (garbled/no communication) over jumper wires; verified with a logic analyzer. Revisit this once the driver moves to a proper PCB.
 
 Planned safety features (not yet implemented): VREFINT brownout check before flash erase/write, IWDG watchdog fed within a 2000 ms loop budget.
 
@@ -51,7 +51,7 @@ There is no test suite in this repo (bare-metal firmware, HIL/manual test protoc
 ## Code architecture
 
 - `Core/Src`, `Core/Inc` — STM32CubeMX-generated peripheral init and startup code (`main.c`, `gpio.c`, `spi.c`, `adc.c`, `tim.c`, `usart.c`, `stm32g4xx_it.c`, HAL MSP/conf). Treat CubeMX-managed regions (`/* USER CODE BEGIN ... END */` blocks) as the only place to hand-edit generated files, since regenerating from `metallicbear.ioc` will overwrite everything else. Note: `main.c` has CRLF line endings — when a plain-text edit tool fails to match a line that greps fine, it's almost always this; either match the `\r` explicitly or use `sed`. A USER CODE block edited with mismatched line endings (LF inserted into an otherwise-CRLF file) can make CubeMX's regeneration merge silently drop that block's contents instead of preserving them — keep any manual edits inside USER CODE blocks CRLF-consistent with the rest of the file.
-- `Drivers/STM32G4xx_HAL_Driver` — vendored ST HAL/LL sources. The SPI HAL/LL files here are currently untracked (added manually to support SPI1 before a CubeMX regeneration picked them up) — check `git status` before assuming the HAL driver set matches what CubeMX would generate.
+- `Drivers/STM32G4xx_HAL_Driver` — vendored ST HAL/LL sources. The SPI HAL/LL files here are currently untracked (added manually to support SPI3 before a CubeMX regeneration picked them up) — check `git status` before assuming the HAL driver set matches what CubeMX would generate.
 - `Drivers/CMSIS` — vendored ARM CMSIS + ST device headers.
 - `Drivers/BSP/uv/W25Qxx` (`w25q_driver.c`/`.h`, `w25q_spi.c`/`.h`) — the custom, hand-written W25Q128 flash driver, split into a protocol layer (`w25q_driver`) and a low-level SPI transport layer (`w25q_spi`); this is the template for how future custom sensor drivers (BME688, SCD30, MQ7) should be structured. It has its own `CMakeLists.txt` (an `OBJECT` library named `w25qxx_Driver`, linked against `stm32cubemx`) and is pulled into the build via `ADD_SUBDIRECTORY(Drivers/BSP/uv/W25Qxx)` and `target_link_libraries(... w25qxx_Driver)` in the top-level `CMakeLists.txt` — there is no `cmake/w25qxx/` directory or `scope-share.cmake`/`STM_SET_LIBNAME()` macro in this repo; follow the simpler pattern actually used in `Drivers/BSP/uv/W25Qxx/CMakeLists.txt` for new drivers instead.
 - `metallicbear.ioc` — the STM32CubeMX project file; peripheral/pin changes should generally be made here and regenerated, not by hand-editing generated `Core/` files outside `USER CODE` blocks.

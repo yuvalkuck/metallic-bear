@@ -19,7 +19,7 @@ graph TD
     MCU -->|Analog ADC1_IN1 / TIM1_CH1 PWM| MQ7
     MCU -->|UART Asynchronous USART1| SCD30
     MCU -->|I2C Multi-Master I2C1| BME688
-    MCU -->|SPI Master Bus SPI1| W25Q
+    MCU -->|SPI Master Bus SPI3| W25Q
     B1 -->|Hardware Falling Edge Interrupt| MCU
 
     %% Styling Elements
@@ -41,7 +41,7 @@ graph TD
 | **MQ7** | Toxic Carbon Monoxide tracking | Analog (ADC) + PWM | PA0 (ADC1_IN1), PA8 (TIM1_CH1) | 5.0V / 1.4V Dual VCC Cycles |
 | **SCD30** | Optical NDIR CO2 monitoring | Asynchronous UART | PA9 (TX), PA10 (RX) [USART1] | 3.3V - 5.5V DC VCC |
 | **BME688** | 4-in-1 Volatile Gas/IAQ | I2C Multi-Master Bus | PB8 (SCL), PB9 (SDA) [I2C1] | 1.2V - 3.6V DC VCC (3.3V Typ) |
-| **W25Q128**| 128M-bit Non-Volatile Flash | SPI Master Bus | PA5(CLK), PA6(MISO), PA7(MOSI), PB0(CS) | 2.7V - 3.6V DC VCC |
+| **W25Q128**| 128M-bit Non-Volatile Flash | SPI Master Bus | PC10(CLK), PC11(MISO), PC12(MOSI), PB0(CS) [SPI3] | 2.7V - 3.6V DC VCC |
 | **Button B1** | Hardware Event Interrupt | External EXTI Line | PC13 (Hardwired Blue Switch) | Active-Low External Pull-up |
 
 
