@@ -8,16 +8,16 @@ MetallicBear (formerly "EnviLogger") is a bare-metal (no RTOS) firmware project 
 
 Drivers are built in a deliberate sequence, from simplest bus to most complex:
 1. **W25Q128 flash (SPI3)** — in progress (see `Drivers/BSP/uv/W25Qxx/`)
-2. **BME688 (I2C1)** — not started
-3. **SCD30 (USART1 + DMA, Modbus RTU/CRC16)** — not started
+2. **BME688 (I2C2)** — not started
+3. **SCD30 (USART3 + DMA, Modbus RTU/CRC16)** — not started
 4. **MQ7 (ADC1 + TIM1 PWM)** — not started
 
 Hardware pin map:
 | Peripheral | Pins | Purpose |
 |---|---|---|
 | SPI3 | PC10 CLK, PC11 MISO, PC12 MOSI, PB0 CS (soft NSS, GPIO output labeled `W25Q_CS`) | W25Q128 flash |
-| I2C1 | PB8 SCL, PB9 SDA | BME688 |
-| USART1 | PA9 TX, PA10 RX (+ RX DMA, circular) | SCD30 Modbus, 19200 baud |
+| I2C2 | PC4 SCL, PA8 SDA | BME688 |
+| USART3 | PB10 TX, PB11 RX (+ RX DMA, circular) | SCD30 Modbus, 19200 baud |
 | USART2 | PA2 TX, PA3 RX | VCP debug console via ST-LINK, 115200 baud, `printf` redirected here |
 | ADC1 | PA0 (IN1) | MQ7 analog read |
 | TIM1 | PA8 (CH1 PWM) | MQ7 heater drive |
