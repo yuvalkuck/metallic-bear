@@ -263,8 +263,8 @@ w25q_status_t w25q_write(w25q_device_t* device, uint32_t address, const uint8_t*
             return W25Q_ERROR_TIMEOUT;
         }
         address += chunk;
-        buffer  += chunk;
-        length  -= chunk;
+        buffer += chunk;
+        length -= chunk;
     }
     return W25Q_OK;
 }
