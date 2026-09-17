@@ -21,6 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <string.h>
 #include "w25q_spi.h"
 #include "w25q_driver.h"
 /* USER CODE END Includes */
@@ -36,7 +37,8 @@ w25q_device_t w25q_device = {};
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define W25Q_TEST_ADDRESS 0x00000000U
+#define W25Q_TEST_LENGTH  256U
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -60,7 +62,41 @@ static void MX_SPI1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+/**
+ * @brief Sector erase -> page program -> read-back self-test for the W25Q128 driver.
+ *        Step into this with the debugger and watch the return value / g_w25q_last_error.
+ */
+static w25q_status_t w25q_self_test(w25q_device_t *device)
+{
+    uint8_t write_buf[W25Q_TEST_LENGTH];
+    uint8_t read_buf[W25Q_TEST_LENGTH];
+    w25q_status_t rc;
 
+    for (uint32_t i = 0; i < W25Q_TEST_LENGTH; i++) {
+        write_buf[i] = (uint8_t)i;
+    }
+
+    rc = w25q_erase(device, W25Q_TEST_ADDRESS, W25Q_ERASE_SECTOR);
+    if (rc != W25Q_OK) {
+        return rc;
+    }
+
+    rc = w25q_write(device, W25Q_TEST_ADDRESS, write_buf, W25Q_TEST_LENGTH);
+    if (rc != W25Q_OK) {
+        return rc;
+    }
+
+    rc = w25q_read(device, W25Q_TEST_ADDRESS, read_buf, W25Q_TEST_LENGTH);
+    if (rc != W25Q_OK) {
+        return rc;
+    }
+
+    if (memcmp(write_buf, read_buf, W25Q_TEST_LENGTH) != 0) {
+        return W25Q_ERROR_ID_MISMATCH;
+    }
+
+    return W25Q_OK;
+}
 /* USER CODE END 0 */
 
 /**
@@ -112,12 +148,20 @@ int main(void)
         Error_Handler();
     }
 
+    g_w25q_last_error = w25q_self_test(&w25q_device);
+    if (g_w25q_last_error != W25Q_OK) {
+        Error_Handler();
+    }
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
     while (1) {
+      volatile void *breakPointPos = NULL;
     /* USER CODE END WHILE */
+
+
 
     /* USER CODE BEGIN 3 */
     }
