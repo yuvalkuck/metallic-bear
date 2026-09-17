@@ -10,7 +10,7 @@
 #define WINBOND_MEMORY_TYPE_128MB  0x40U
 #define WINBOND_CAPACITY_128MB     0x18U
 #define W25Q_MAX_BUSY_WAIT_MS      (60*1000*100) // 100 seconds
-
+#define W25Q_PAGE_SIZE 256U
 /**
  * @brief  Captures a running 32-bit millisecond baseline from SysTick hardware.
  *         Assumes SysTick is configured to cycle at a 1ms frequency.
@@ -231,7 +231,40 @@ w25q_status_t w25q_erase(w25q_device_t* device, uint32_t address, w25q_erase_cmd
  * @param  length: Combined memory payload array bounds data allocation.
  * @retval w25q_status_t: Complete internal execution confirmation code.
  */
+
 w25q_status_t w25q_write(w25q_device_t* device, uint32_t address, const uint8_t* buffer, uint32_t length) {
-    
-    return W25Q_ERROR_NOT_IMPLEMENT;
+    if (device == NULL || device->spi_bus == NULL || buffer == NULL) {
+        return W25Q_ERROR_PARAM;
+    }
+    if (w25q_wait_busy(device, W25Q_MAX_BUSY_WAIT_MS) != SPI_OK) {
+        return W25Q_ERROR_TIMEOUT;
+    }
+    while (length > 0) {
+        uint32_t page_offset = address % W25Q_PAGE_SIZE;
+        uint32_t chunk = W25Q_PAGE_SIZE - page_offset;
+        if (chunk > length) {
+            chunk = length;
+        }
+        if (w25q_write_enable(device, 1) != SPI_OK) {
+            return W25Q_ERROR_TIMEOUT;
+        }
+        w25q_frame_t frame;
+        W25Q_PACK_FRAME_HW(&frame, W25Q_CMD_PAGE_PROGRAM, address);
+        w25q_spi_cs_assert(device->spi_bus);
+        w25q_spi_status_t rc = w25q_spi_transmit(device->spi_bus, frame.bytes, W25Q_FRAME_UINT8_SIZE);
+        if (rc == SPI_OK) {
+            rc = w25q_spi_transmit(device->spi_bus, buffer, chunk);
+        }
+        w25q_spi_cs_deassert(device->spi_bus);
+        if (rc != SPI_OK) {
+            return W25Q_ERROR_SPI_FAIL;
+        }
+        if (w25q_wait_busy(device, W25Q_MAX_BUSY_WAIT_MS) != SPI_OK) {
+            return W25Q_ERROR_TIMEOUT;
+        }
+        address += chunk;
+        buffer  += chunk;
+        length  -= chunk;
+    }
+    return W25Q_OK;
 }
