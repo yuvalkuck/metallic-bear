@@ -36,6 +36,7 @@ add_executable(${CMAKE_PROJECT_NAME})
 
 # Add STM32CubeMX generated sources
 add_subdirectory(cmake/stm32cubemx)
+ADD_SUBDIRECTORY(Drivers/BME68x)
 ADD_SUBDIRECTORY(Drivers/BSP/uv/W25Qxx)
 ADD_SUBDIRECTORY(Drivers/BSP/uv/BME688)
 
