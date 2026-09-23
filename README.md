@@ -4,6 +4,8 @@ The MetalicBear system operates as an embedded automotive cabin air quality moni
 
 Telemetry data is packaged into structured, uniform binary arrays and committed locally to non-volatile flash memory via a serialized communication link. Debug tracking and system state inspection are achieved via an integrated Virtual COM Port (VCP) link back to a PC console.
 
+* Something important: this LL project use configuration made by CubeMX for compatible. 
+
 ```mermaid
 graph TD
     %% Node Definitions
