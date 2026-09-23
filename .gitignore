@@ -14,3 +14,7 @@ CMakeUserPresets.json
 /build
 # CLion
 /.idea/**
+/*.csv
+/l.l
+/recap_*
+/recap.*
