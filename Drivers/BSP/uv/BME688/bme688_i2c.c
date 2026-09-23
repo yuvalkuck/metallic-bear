@@ -32,3 +32,14 @@ bme688_i2c_status_t bme688_i2c_init(const bme688_i2c_handle_t* hi2c) {
     I2Cx->ICR |= I2C_ICR_STOPCF;
     return I2C_OK;
 }
+void bme688_delay_us(uint32_t period, void *intf_ptr) {
+
+}
+int8_t bme688_i2c_bus_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf_ptr) {
+    return BME68X_E_NULL_PTR;
+}
+
+int8_t bme688_i2c_bus_write(uint8_t reg_addr, const uint8_t *reg_data, uint32_t len, void *intf_ptr){
+    return BME68X_E_NULL_PTR;
+}
+
