@@ -32,10 +32,26 @@ bme688_i2c_status_t bme688_i2c_init(const bme688_i2c_handle_t* hi2c) {
     I2Cx->ICR |= I2C_ICR_STOPCF;
     return I2C_OK;
 }
+
+/**
+ *
+ * @param period
+ * @param intf_ptr
+ */
 void bme688_delay_us(uint32_t period, void *intf_ptr) {
 
 }
-int8_t bme688_i2c_bus_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t len, void *intf_ptr) {
+
+/**
+ * Read start with write because it a transaction, open transaction, write to the device to send something, read it & close transaction
+ * because it actually 2 action, the auto-end is Off between first and second.
+ * @param uint8_t reg_addr
+ * @param uint8_t *reg_data
+ * @param uint32_t datalen
+ * @param void *intf_ptr
+ * @return uint8_t
+ */
+int8_t bme688_i2c_bus_read(uint8_t reg_addr, uint8_t *reg_data, uint32_t datalen, void *intf_ptr) {
     return BME68X_E_NULL_PTR;
 }
 

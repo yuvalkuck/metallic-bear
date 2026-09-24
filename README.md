@@ -43,6 +43,7 @@ graph TD
 | **MQ7** | Toxic Carbon Monoxide tracking | Analog (ADC) + PWM | PA0 (ADC1_IN1), PA8 (TIM1_CH1) | 5.0V / 1.4V Dual VCC Cycles |
 | **SCD30** | Optical NDIR CO2 monitoring | Asynchronous UART | PB10 (TX), PB11 (RX) [USART3] | 3.3V - 5.5V DC VCC |
 | **BME688** | 4-in-1 Volatile Gas/IAQ | I2C Multi-Master Bus | PC4 (SCL), PA8 (SDA) [I2C2] | 1.2V - 3.6V DC VCC (3.3V Typ) |
+| **BME688 delay** | Microsecond delay source for the Bosch BME68x API's `bme688_delay_us()` callback | Timer (no I/O pin) | TIM6, internal only | N/A |
 | **W25Q128**| 128M-bit Non-Volatile Flash | SPI Master Bus | PC10(CLK), PC11(MISO), PC12(MOSI), PB0(CS) [SPI3] | 2.7V - 3.6V DC VCC |
 | **Button B1** | Hardware Event Interrupt | External EXTI Line | PC13 (Hardwired Blue Switch) | Active-Low External Pull-up |
 
@@ -59,6 +60,7 @@ To master bare-metal peripheral programming from scratch, EnviLogger drivers are
 ### Phase 2: BME688 Air Quality Sensor (I2C Register-Mapped Bus)
 * **Learning Intent:** Master I2C Start/Stop conditions, 7-bit slave address matching, register pointer selection writes, multi-byte burst reading, and executing factory calibration polynomials.
 * **Why second:** Introduces standard register addressing architectures over a shared 2-wire bus layout.
+* **Delay source:** The Bosch BME68x sensor API requires a microsecond-resolution delay callback (`bme688_delay_us()` in `Drivers/BSP/uv/BME688/bme688_i2c.c`), which `HAL_Delay()` cannot provide since it's driven by the 1 kHz SysTick tick. TIM6 (a basic timer with no external pins, freeing it from pin-mux conflicts) is used as a free-running microsecond counter for this purpose instead.
 
 ### Phase 3: SCD30 Gas Array Module (UART Frame Parsing)
 * **Learning Intent:** Master asynchronous streaming, Direct Memory Access (DMA) channel processing utilizing a circular ring buffer design, and verification of multi-byte Modbus RTU checksum frames (CRC16).
