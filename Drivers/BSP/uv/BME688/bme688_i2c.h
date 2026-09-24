@@ -5,6 +5,7 @@
 
 typedef struct {
     I2C_TypeDef   *i2c;
+    TIM_TypeDef  *tim;
     uint8_t       device;
 } bme688_i2c_handle_t;
 
