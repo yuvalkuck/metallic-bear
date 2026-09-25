@@ -4,6 +4,8 @@ MetallicBear is a personal learning lab for bare-metal STM32 device driver devel
 
 The project is written in C and targets the NUCLEO-G474RE board (STM32G474RET6). An air-quality sensor array (CO, CO2/RH/temp, IAQ gas) logged to external flash and streamed over a serial console was chosen as a realistic, multi-peripheral vehicle to drive that learning — it gives each driver a concrete communication link, a register/protocol contract, and real timing constraints to get right, rather than being the point of the project itself.
 
+Alongside the driver code itself, part of the exercise is following ST's own conventions for *where* and *how* a driver is structured: peripheral/pin/clock setup stays owned by STM32CubeMX-generated code, and hand-written logic lives in clearly separated `USER CODE` blocks or dedicated BSP modules (see `Drivers/BSP/uv/`), never hand-patched into the generated regions. Sticking to that structure keeps the project regeneration-safe — re-running CubeMX after a pin or clock change merges cleanly instead of clobbering custom code — and is also what ST's tooling (CubeMX, CubeIDE, CubeProgrammer) and ecosystem assume when a project is ported to another board or handed off to someone else.
+
 ```mermaid
 graph TD
     %% Node Definitions
