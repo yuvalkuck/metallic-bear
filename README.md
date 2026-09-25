@@ -1,10 +1,8 @@
 ## System Architecture & Interconnect Topology
 
-The MetalicBear system operates as an embedded automotive cabin air quality monitor and telemetry logging engine. It captures raw carbon monoxide spikes, absolute carbon dioxide values, and multi-variable atmospheric air parameters to evaluate driver fatigue states.
+MetallicBear is a personal learning lab for bare-metal STM32 device driver development, not a product. The goal is to practice writing peripheral drivers from scratch — directly against ST's Low-Layer (LL) register API, with no HAL abstractions and no RTOS — across a progression of bus types (SPI, I2C, UART+DMA, ADC/timers) of increasing complexity.
 
-Telemetry data is packaged into structured, uniform binary arrays and committed locally to non-volatile flash memory via a serialized communication link. Debug tracking and system state inspection are achieved via an integrated Virtual COM Port (VCP) link back to a PC console.
-
-* Something important: this LL project use configuration made by CubeMX for compatible. 
+The project is written in C and targets the NUCLEO-G474RE board (STM32G474RET6). An air-quality sensor array (CO, CO2/RH/temp, IAQ gas) logged to external flash and streamed over a serial console was chosen as a realistic, multi-peripheral vehicle to drive that learning — it gives each driver a concrete communication link, a register/protocol contract, and real timing constraints to get right, rather than being the point of the project itself.
 
 ```mermaid
 graph TD
