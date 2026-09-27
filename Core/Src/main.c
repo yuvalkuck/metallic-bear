@@ -35,7 +35,7 @@ w25q_spi_handle_t w25q_spi3 = {
 };
 bme688_i2c_handle_t bme688_i2c2 = {
     I2C2, TIM6,
-    BME68X_I2C_ADDR_HIGH
+    BME68X_I2C_ADDR_LOW
 };
 w25q_device_t w25q_device = {};
 bme688_device_t bme688_device = {};
