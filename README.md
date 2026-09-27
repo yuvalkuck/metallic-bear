@@ -18,7 +18,7 @@ graph TD
     B1[User Button B1<br>PC13 EXTI]
 
     %% Hardware Connections
-    MCU -->|Analog ADC1_IN1 / TIM1_CH1 PWM planned on PC0| MQ7
+    MCU -->|Analog ADC1_IN1 (PA0) / TIM1_CH1 PWM (PC0), interrupt-driven heat cycle + sample| MQ7
     MCU -->|UART Asynchronous USART3| SCD30
     MCU -->|I2C Multi-Master I2C2| BME688
     MCU -->|SPI Master Bus SPI3| W25Q
@@ -40,7 +40,7 @@ graph TD
 
 | Module | Core Purpose | Interface Type | Pin Allocation | Electrical Requirements |
 | :--- | :--- | :--- | :--- | :--- |
-| **MQ7** | Toxic Carbon Monoxide tracking | Analog (ADC) + PWM | PA0 (ADC1_IN1), PA8 (TIM1_CH1) | 5.0V / 1.4V Dual VCC Cycles |
+| **MQ7** | Toxic Carbon Monoxide tracking | Analog (ADC) + PWM | PA0 (ADC1_IN1), PC0 (TIM1_CH1) | 5.0V / 1.4V Dual VCC Cycles |
 | **SCD30** | Optical NDIR CO2 monitoring | Asynchronous UART | PB10 (TX), PB11 (RX) [USART3] | 3.3V - 5.5V DC VCC |
 | **BME688** | 4-in-1 Volatile Gas/IAQ | I2C Multi-Master Bus | PC4 (SCL), PA8 (SDA) [I2C2] | 1.2V - 3.6V DC VCC (3.3V Typ) |
 | **BME688 delay** | Microsecond delay source for the Bosch BME68x API's `bme688_delay_us()` callback | Timer (no I/O pin) | TIM6, internal only | N/A |
@@ -69,3 +69,4 @@ To master bare-metal peripheral programming from scratch, EnviLogger drivers are
 ### Phase 4: MQ7 Sensor Management (MCU Core Analog & Timers)
 * **Learning Intent:** Master internal microcontroller core configurations. Drive external transistor paths using hardware PWM outputs, execute tracking time profiles, and isolate analog read windows.
 * **Why last:** Teaches how to coordinate multiple internal chip systems (TIM and ADC blocks) to execute complex, time-dependent physical workloads.
+* **Interrupt design:** TIM1's 1 Hz update interrupt serves as a software tick that drives a heat-on → wait → heat-off → wait → sample state machine (swapping the PWM duty cycle between the MQ7's high/low VCC setpoints at each phase boundary, per the datasheet's tens-of-seconds heat/cool timing). At the end of the sensing phase, that tick starts a single ADC1 conversion; ADC1's end-of-conversion interrupt then delivers the raw sample.

@@ -10,7 +10,7 @@ Drivers are built in a deliberate sequence, from simplest bus to most complex:
 1. **W25Q128 flash (SPI3)** — in progress (see `Drivers/BSP/uv/W25Qxx/`)
 2. **BME688 (I2C2)** — in progress (see `Drivers/BSP/uv/BME688/`)
 3. **SCD30 (USART3 + DMA, Modbus RTU/CRC16)** — not started
-4. **MQ7 (ADC1 + TIM1 PWM)** — not started (TIM1_CH1 PWM is configured in the `.ioc` on PC0, but no driver code exists yet)
+4. **MQ7 (ADC1 + TIM1 PWM)** — not started (TIM1_CH1 PWM is configured in the `.ioc` on PC0, and both `TIM1_UP_TIM16_IRQn` and `ADC1_2_IRQn` are enabled in NVIC, but no driver code exists yet — see the TIM1/ADC1 interrupt note below)
 
 Hardware pin map:
 | Peripheral | Pins | Purpose |
@@ -26,6 +26,8 @@ Hardware pin map:
 Note on `W25Q_CS`: it lives on PB0 (Morpho connector) rather than on SPI3's hardware NSS pin, since the driver drives chip-select manually as a plain GPIO output. The flash link was originally wired to SPI1 (PA5 CLK, PA6 MISO, PA7 MOSI) but was moved to SPI3 because PA5 conflicts with the NUCLEO-G474RE's onboard LED (LD2), which is hardwired to that pin. This board has no HSE crystal fitted (NUCLEO-64 boards ship with the X3 footprint unpopulated by default), so `SystemClock_Config()` derives the 170 MHz system clock from HSI (16 MHz) through the PLL, not HSE.
 
 Note on `TIM1` CH1 pin: it's on PC0 rather than the more commonly-documented PA8, because PA8 is already committed to `I2C2_SDA` (BME688) on this board — TIM1_CH1's other AF-mapped candidate pin on the STM32G474RET6's LQFP64 package. The MQ7 heater drive itself needs two distinct duty-cycle setpoints on the same PWM channel (a high-duty "heating" phase and a lower-duty "cooling" phase, each lasting tens of seconds per the MQ7 datasheet cycle) swapped by software on a slow timer/tick, not two separate hardware channels.
+
+Note on the MQ7 heat-cycle/sample interrupt design: `TIM1.Prescaler=16999` and `TIM1.PeriodNoDither=9999` give a TIM1 update event at exactly 170 MHz / 17000 / 10000 = 1 Hz, and `NVIC.TIM1_UP_TIM16_IRQn` is enabled so `TIM1_UP_TIM16_IRQHandler` (`Core/Src/stm32g4xx_it.c`) fires once per second — this is the intended software tick for a heat-on → wait → heat-off → wait → sample state machine (counting ticks against the MQ7 datasheet's heat/cool phase durations, and swapping CCR1 between the two duty setpoints at phase boundaries). At the end of the cool/sensing phase that ISR should kick off a single ADC1 conversion (`LL_ADC_REG_StartConversion`); `NVIC.ADC1_2_IRQn` is enabled so `ADC1_2_IRQHandler` fires on end-of-conversion to deliver the sample. Two things CubeMX's `.ioc` does *not* configure, since they're plain register writes rather than `.ioc`-level parameters: the ADC1 EOC interrupt enable bit (`LL_ADC_EnableIT_EOC(ADC1)`, needed once at init) and the actual `LL_ADC_REG_StartConversion` call. Given this is a bare-metal, no-RTOS superloop, keep `ADC1_2_IRQHandler` itself minimal (store the raw reading + set a `volatile` "sample ready" flag) and do any heavier delivery (printf, flash logging) from `main()`'s loop instead of from interrupt context.
 
 On breadboard wiring, SPI3's baud rate prescaler is set to `/64` (~2.66 MHz) rather than the CubeMX-computed max of `/4` (42.5 MHz) — full speed causes signal-integrity failures (garbled/no communication) over jumper wires; verified with a logic analyzer. Revisit this once the driver moves to a proper PCB.
 
