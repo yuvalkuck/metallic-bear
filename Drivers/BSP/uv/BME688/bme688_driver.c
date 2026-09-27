@@ -1,5 +1,7 @@
 #include "bme688_driver.h"
 
+#include "bme68x.h"
+
 bme688_status_t bme688_init(bme688_device_t *device, const bme688_i2c_handle_t *bus) {
     device->i2c_bus = bus;
     device->chip_id = 0;
@@ -12,6 +14,11 @@ bme688_status_t bme688_init(bme688_device_t *device, const bme688_i2c_handle_t *
     device->api.read     = bme688_i2c_bus_read;
     device->api.write    = bme688_i2c_bus_write;
     device->api.delay_us = bme688_delay_us;
+    device->api.intf_ptr = (void *)device->i2c_bus;
+    uint8_t drc = bme68x_init(&device->api);
+    if (drc != BME68X_OK) {
+        return BME688_ERROR_I2C_FAIL; // this is the only option the init can return
+    }
     device->is_initialized = 1;
     device->chip_id = BME68X_CHIP_ID;
     return BME688_OK;

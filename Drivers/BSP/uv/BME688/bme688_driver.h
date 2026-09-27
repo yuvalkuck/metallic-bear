@@ -13,6 +13,7 @@ typedef enum {
     BME688_OK                  = 0x00,
     BME688_ERROR_I2C_FAIL      = 0x01,
     BME688_ERROR_ID_MISMATCH   = 0x02,
+    BME688_ERROR_DEVICE_INIT   = 0x03,
     // BME688_ERROR_BOUNDARY      = 0x03,
     // BME688_ERROR_TIMEOUT       = 0x04,
     // BME688_ERROR_WRITE_PROTECT = 0x05,

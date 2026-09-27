@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.22)
 
 #
 # This file is generated only once,
@@ -8,68 +8,67 @@ cmake_minimum_required(VERSION 3.22)
 #
 
 # Setup compiler settings
-set(CMAKE_C_STANDARD 11)
-set(CMAKE_C_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS ON)
+SET(CMAKE_C_STANDARD 11)
+SET(CMAKE_C_STANDARD_REQUIRED ON)
+SET(CMAKE_C_EXTENSIONS ON)
 
 
 # Define the build type
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Debug")
-endif()
+IF (NOT CMAKE_BUILD_TYPE)
+    SET(CMAKE_BUILD_TYPE "Debug")
+ENDIF ()
 
 # Set the project name
-set(CMAKE_PROJECT_NAME metallic-bear)
+SET(CMAKE_PROJECT_NAME metallic-bear)
 
 # Enable compile command to ease indexing with e.g. clangd
-set(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
+SET(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)
 
 # Core project settings
-project(${CMAKE_PROJECT_NAME})
-message("Build type: " ${CMAKE_BUILD_TYPE})
+PROJECT(${CMAKE_PROJECT_NAME})
+MESSAGE("Build type: " ${CMAKE_BUILD_TYPE})
 
 # Enable CMake support for ASM and C languages
-enable_language(C ASM)
+ENABLE_LANGUAGE(C ASM)
 
 # Create an executable object type
-add_executable(${CMAKE_PROJECT_NAME})
+ADD_EXECUTABLE(${CMAKE_PROJECT_NAME})
 
 # Add STM32CubeMX generated sources
-add_subdirectory(cmake/stm32cubemx)
+ADD_SUBDIRECTORY(cmake/stm32cubemx)
 ADD_SUBDIRECTORY(Drivers/BME68x)
 ADD_SUBDIRECTORY(Drivers/BSP/uv/BME688)
 ADD_SUBDIRECTORY(Drivers/BSP/uv/W25Qxx)
 
 # Link directories setup
-target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
-    # Add user defined library search paths
+TARGET_LINK_DIRECTORIES(${CMAKE_PROJECT_NAME} PRIVATE
+        # Add user defined library search paths
 )
 
 # Add sources to executable
-target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    # Add user sources here
+TARGET_SOURCES(${CMAKE_PROJECT_NAME} PRIVATE
+        # Add user sources here
 )
 
 # Add include paths
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
-    # Add user defined include paths
+TARGET_INCLUDE_DIRECTORIES(${CMAKE_PROJECT_NAME} PRIVATE
+        # Add user defined include paths
 )
 
 # Add project symbols (macros)
-target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
-    # Add user defined symbols
+TARGET_COMPILE_DEFINITIONS(${CMAKE_PROJECT_NAME} PRIVATE
+        # Add user defined symbols
 )
 
 
-
 # Remove wrong libob.a library dependency when using cpp files
-list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
+LIST(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 
 # Add linked libraries
-target_link_libraries(${CMAKE_PROJECT_NAME}
-    stm32cubemx
+TARGET_LINK_LIBRARIES(${CMAKE_PROJECT_NAME}
+        stm32cubemx
         w25qxx_Driver
+        bme68x_Driver
         bme688_Driver
-
-    # Add user defined libraries
+        # Add user defined libraries
 )
