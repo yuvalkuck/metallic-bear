@@ -18,7 +18,7 @@ graph TD
     B1[User Button B1<br>PC13 EXTI]
 
     %% Hardware Connections
-    MCU -->|Analog ADC1_IN1 / TIM1_CH1 PWM| MQ7
+    MCU -->|Analog ADC1_IN1 / TIM1_CH1 PWM planned on PC0| MQ7
     MCU -->|UART Asynchronous USART3| SCD30
     MCU -->|I2C Multi-Master I2C2| BME688
     MCU -->|SPI Master Bus SPI3| W25Q
