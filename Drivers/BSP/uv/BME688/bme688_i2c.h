@@ -23,8 +23,8 @@ typedef enum {
 } bme688_i2c_status_t;
 
 bme688_i2c_status_t bme688_i2c_init(const bme688_i2c_handle_t* hi2c);
-int8_t bme688_i2c_bus_write(uint8_t reg_addr, const uint8_t* reg_data, uint32_t len, void* intf_ptr);
-int8_t bme688_i2c_bus_read(uint8_t reg_addr, uint8_t* reg_data, uint32_t len, void* intf_ptr);
+int8_t bme688_i2c_bus_write(uint8_t reg_addr, const uint8_t* reg_data, uint32_t , void* intf_ptr);
+int8_t bme688_i2c_bus_read(uint8_t reg_addr, uint8_t* reg_data, uint32_t , void* intf_ptr);
 void bme688_delay_us(uint32_t period, void* intf_ptr);
 
 #endif

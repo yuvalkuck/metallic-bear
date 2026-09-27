@@ -167,8 +167,9 @@ int8_t bme688_i2c_bus_read(uint8_t reg_addr, uint8_t* reg_data, uint32_t datalen
     return I2C_OK;
 }
 
-int8_t bme688_i2c_bus_write(uint8_t reg_addr, const uint8_t* reg_data, uint32_t len, void* intf_ptr) {
+int8_t bme688_i2c_bus_write(uint8_t reg_addr, const uint8_t* reg_data, uint32_t datalen, void* intf_ptr) {
     bme688_i2c_handle_t* handle = intf_ptr;
     I2C_TypeDef* I2Cx = handle->i2c;
-    return I2C_ERROR_NULL_PTR;
+
+    return I2C_OK;
 }
