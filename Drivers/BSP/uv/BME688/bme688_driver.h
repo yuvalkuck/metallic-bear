@@ -8,4 +8,17 @@ typedef struct {
     uint8_t is_initialized;             /* Internal tracker boolean flag */
 } bme688_device_t;
 
+typedef enum {
+    BME688_OK                  = 0x00,
+    BME688_ERROR_I2C_FAIL      = 0x01,
+    BME688_ERROR_ID_MISMATCH   = 0x02,
+    // BME688_ERROR_BOUNDARY      = 0x03,
+    // BME688_ERROR_TIMEOUT       = 0x04,
+    // BME688_ERROR_WRITE_PROTECT = 0x05,
+    // BME688_ERROR_PARAM         = 0x06,
+    BME688_ERROR_NOT_IMPLEMENT = 0x0A
+} bme688_status_t;
+
+bme688_status_t bme688_init(bme688_device_t* device, const bme688_i2c_handle_t* bus);
+bme688_status_t bme688_verify_chip_id(bme688_device_t* hw_handle);
 #endif
