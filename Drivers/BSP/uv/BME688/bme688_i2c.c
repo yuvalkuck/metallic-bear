@@ -13,6 +13,14 @@ bme688_i2c_status_t bme688_i2c_init(const bme688_i2c_handle_t* hi2c) {
         return I2C_ERROR_SELF_TEST;
     }
 
+    // Issue a zero-byte "ping": address-only transaction with AUTOEND, so the
+    // hardware sends the device address and auto-generates STOP once it's
+    // ACKed/NACKed, without us needing to transfer any data bytes.
+    uint32_t cr2_reg = I2Cx->CR2;
+    cr2_reg &= ~(I2C_CR2_SADD | I2C_CR2_NBYTES | I2C_CR2_RD_WRN | I2C_CR2_AUTOEND | I2C_CR2_START | I2C_CR2_STOP);
+    cr2_reg |= (((uint32_t)(hi2c->device << 1) & I2C_CR2_SADD) | I2C_CR2_AUTOEND | I2C_CR2_START);
+    I2Cx->CR2 = cr2_reg;
+
     uint32_t timeout = BME688_I2C_INIT_TIMEOUT;
     while (!(I2Cx->ISR & I2C_ISR_STOPF)) {
         // If the BME688 responds with a NACK, clear flags and catch it immediately
