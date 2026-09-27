@@ -107,9 +107,12 @@ static inline int8_t _i2c_poll_flag(I2C_TypeDef* I2Cx, uint32_t flag, uint32_t e
  * @return uint8_t
  */
 int8_t bme688_i2c_bus_read(uint8_t reg_addr, uint8_t* reg_data, uint32_t datalen, void* intf_ptr) {
+    if ((reg_data == NULL) || (intf_ptr == NULL) || (datalen == 0)) {
+        return I2C_ERROR_COMM; // BME68X_E_COM_FAIL
+    }
     bme688_i2c_handle_t* handle = intf_ptr;
     I2C_TypeDef* I2Cx = handle->i2c;
-    if ((reg_data == NULL) || (intf_ptr == NULL) || (datalen == 0)) {
+    if (I2Cx == NULL) {
         return I2C_ERROR_COMM; // BME68X_E_COM_FAIL
     }
     // just in case
@@ -170,9 +173,12 @@ int8_t bme688_i2c_bus_read(uint8_t reg_addr, uint8_t* reg_data, uint32_t datalen
 }
 
 int8_t bme688_i2c_bus_write(uint8_t reg_addr, const uint8_t* reg_data, uint32_t datalen, void* intf_ptr) {
+    if ((reg_data == NULL) || (intf_ptr == NULL)) {
+        return I2C_ERROR_COMM;
+    }
     bme688_i2c_handle_t* handle = intf_ptr;
     I2C_TypeDef* I2Cx = handle->i2c;
-    if ((reg_data == NULL) || (intf_ptr == NULL)) {
+    if (I2Cx == NULL) {
         return I2C_ERROR_COMM;
     }
     // just in case
