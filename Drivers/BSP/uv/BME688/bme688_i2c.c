@@ -161,6 +161,8 @@ int8_t bme688_i2c_bus_read(uint8_t reg_addr, uint8_t* reg_data, uint32_t datalen
         // Harvest the captured data byte straight into destination
         reg_data[ii] = (uint8_t)(I2Cx->RXDR);
     }
+    // Wait until the hardware-driven AUTOEND scheduler achieves complete physical bus line closure
+    if (_i2c_poll_flag(I2Cx, I2C_ISR_STOPF, I2C_ISR_STOPF) != 0) { return I2C_ERROR_COMM; }
     // clear the stop after a transaction completely finishes.
     I2Cx->ICR |= I2C_ICR_STOPCF;
 
@@ -170,6 +172,31 @@ int8_t bme688_i2c_bus_read(uint8_t reg_addr, uint8_t* reg_data, uint32_t datalen
 int8_t bme688_i2c_bus_write(uint8_t reg_addr, const uint8_t* reg_data, uint32_t datalen, void* intf_ptr) {
     bme688_i2c_handle_t* handle = intf_ptr;
     I2C_TypeDef* I2Cx = handle->i2c;
+    if ((reg_data == NULL) || (intf_ptr == NULL)) {
+        return I2C_ERROR_COMM;
+    }
+    // just in case
+    if (_i2c_poll_flag(I2Cx, I2C_ISR_BUSY, 0U) != 0) { return I2C_ERROR_COMM; }
+    // same as in read, remove, add and set
+    uint32_t cr2_reg = I2Cx->CR2 & ~(I2C_CR2_SADD | I2C_CR2_NBYTES | I2C_CR2_RD_WRN | I2C_CR2_AUTOEND | I2C_CR2_START |
+        I2C_CR2_STOP);
+    cr2_reg |= (((uint32_t)(handle->device << 1) & I2C_CR2_SADD) |
+        (((1U + datalen) << I2C_CR2_NBYTES_Pos) & I2C_CR2_NBYTES) |
+        I2C_CR2_AUTOEND |
+        I2C_CR2_START);
+    I2Cx->CR2 = cr2_reg;
+
+    if (_i2c_poll_flag(I2Cx, I2C_ISR_TXIS, I2C_ISR_TXIS) != 0) { return I2C_ERROR_COMM; }
+    I2Cx->TXDR = reg_addr; // set what to send
+
+    for (uint32_t ii = 0; ii < datalen; ii++) {
+        if (_i2c_poll_flag(I2Cx, I2C_ISR_TXIS, I2C_ISR_TXIS) != 0) { return I2C_ERROR_COMM; }
+        I2Cx->TXDR = reg_data[ii];
+    }
+    // Wait until the hardware-driven AUTOEND scheduler achieves complete physical bus line closure
+    if (_i2c_poll_flag(I2Cx, I2C_ISR_STOPF, I2C_ISR_STOPF) != 0) { return I2C_ERROR_COMM; }
+    // clear the stop after a transaction completely finishes.
+    I2Cx->ICR |= I2C_ICR_STOPCF;
 
     return I2C_OK;
 }
