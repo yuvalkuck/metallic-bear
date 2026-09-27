@@ -23,7 +23,7 @@ bme688_i2c_status_t bme688_i2c_init(const bme688_i2c_handle_t* hi2c) {
         if (--timeout == 0) {
             // Bus is completely locked up or shorted out! Clear the line and exit.
             I2Cx->CR1 &= ~I2C_CR1_PE; // Disable the I2C block to reset its state
-            I2Cx->CR1 |= I2C_CR1_PE; // Re-enable it
+            I2Cx->CR1 |= I2C_CR1_PE;  // Re-enable it
             return I2C_ERROR_TIMEOUT; // Return timeout error code instead of freezing
         }
     }
@@ -76,6 +76,28 @@ void bme688_delay_us(uint32_t period, void* intf_ptr) {
 }
 
 /**
+ * @brief Zero-overhead inline helper to poll I2C status register flags with a timeout.
+ *        Optimized by the compiler to eliminate code duplication without a function call penalty.
+ */
+static inline int8_t _i2c_poll_flag(I2C_TypeDef* I2Cx, uint32_t flag, uint32_t expected_mask) {
+    uint32_t timeout = 150000U;
+
+    // Pure bitwise match: loops as long as the filtered bit does not match the target mask
+    while ((I2Cx->ISR & flag) != expected_mask) {
+        // Immediately intercept and clear NACK errors to avoid a dead-lock hang
+        if (I2Cx->ISR & I2C_ISR_NACKF) {
+            I2Cx->ICR |= I2C_ICR_NACKCF;
+            return I2C_ERROR_COMM; // BME68X_E_COM_FAIL
+        }
+
+        if (--timeout == 0) {
+            return I2C_ERROR_COMM; // BME68X_E_COM_FAIL
+        }
+    }
+    return I2C_OK; // Success
+}
+
+/**
  * Read start with write because it a transaction, open transaction, write to the device to send something, read it & close transaction
  * because it actually 2 action, the auto-end is Off between first and second.
  * @param  reg_addr
@@ -87,11 +109,66 @@ void bme688_delay_us(uint32_t period, void* intf_ptr) {
 int8_t bme688_i2c_bus_read(uint8_t reg_addr, uint8_t* reg_data, uint32_t datalen, void* intf_ptr) {
     bme688_i2c_handle_t* handle = intf_ptr;
     I2C_TypeDef* I2Cx = handle->i2c;
-    return BME68X_E_NULL_PTR;
+    if ((reg_data == NULL) || (intf_ptr == NULL) || (datalen == 0)) {
+        return I2C_ERROR_COMM; // BME68X_E_COM_FAIL
+    }
+    // just in case
+    if (_i2c_poll_flag(I2Cx, I2C_ISR_BUSY, 0U) != 0) { return I2C_ERROR_COMM; }
+    // cycle is write what you what to read & then wait to read it
+    /**
+     * PHASE I: write to the device and live the line open
+     */
+    //The CR2 register contains bits that you configure once at startup and must never erase or overwrite during a read or write transaction.
+    // must modify it content and not just override
+    uint32_t cr2_reg = I2Cx->CR2;
+    // first remove what we do not want
+    cr2_reg &= ~(I2C_CR2_SADD | I2C_CR2_NBYTES | I2C_CR2_RD_WRN | I2C_CR2_AUTOEND | I2C_CR2_START | I2C_CR2_STOP);
+    // add what need to happen next
+    cr2_reg |= (((uint32_t)(handle->device << 1) & I2C_CR2_SADD) |
+        (1U << I2C_CR2_NBYTES_Pos) |
+        I2C_CR2_START);
+    // make it happen.
+    I2Cx->CR2 = cr2_reg;
+
+    if (_i2c_poll_flag(I2Cx, I2C_ISR_TXIS, I2C_ISR_TXIS) != 0) { return I2C_ERROR_COMM; }
+    /**
+     * Q: If the CPU doesn't write to TXDR fast enough after TXIS clears, won't the hardware time out, drop the ball, or cause a race condition?
+     * A: the STM32 streach the clock until it get data in the register, it will not send conetetr of TXRD until it was updated.
+     */
+    I2Cx->TXDR = reg_addr; // set what to send
+    // wait until the action ends or timeout, Because AUTOEND is disabled, we just need to know it Complete Transmitted
+    if (_i2c_poll_flag(I2Cx, I2C_ISR_TC, I2C_ISR_TC) != 0) { return I2C_ERROR_COMM; }
+
+    /**
+    * PHASE II: read from the device
+    */
+    // same as before, read, clear instructions, add intructions and go
+    // Read CR2, subtract old Phase 1 bits via clear mask, and assign the Phase 2 blueprint
+    cr2_reg = I2Cx->CR2 & ~(I2C_CR2_SADD | I2C_CR2_NBYTES | I2C_CR2_RD_WRN | I2C_CR2_AUTOEND | I2C_CR2_START |
+        I2C_CR2_STOP);
+    cr2_reg |= (((uint32_t)(handle->device << 1) & I2C_CR2_SADD) |
+        ((datalen << I2C_CR2_NBYTES_Pos) & I2C_CR2_NBYTES) |
+        I2C_CR2_RD_WRN |  // AI: Invert transaction flow to input read mode
+        I2C_CR2_AUTOEND | // AI: Instruct engine to send a Stop sequence on the final byte
+        I2C_CR2_START);   // AI: Generate a Repeated START on the wide open bus line
+    I2Cx->CR2 = cr2_reg;
+
+    // Read block loop
+    for (uint32_t ii = 0; ii < datalen; ii++) {
+        // Wait for dynamic byte capture notification via Receive Not Empty (RXNE) flag
+        if (_i2c_poll_flag(I2Cx, I2C_ISR_RXNE, I2C_ISR_RXNE) != 0) { return I2C_ERROR_COMM; }
+
+        // Harvest the captured data byte straight into destination
+        reg_data[ii] = (uint8_t)(I2Cx->RXDR);
+    }
+    // clear the stop after a transaction completely finishes.
+    I2Cx->ICR |= I2C_ICR_STOPCF;
+
+    return I2C_OK;
 }
 
 int8_t bme688_i2c_bus_write(uint8_t reg_addr, const uint8_t* reg_data, uint32_t len, void* intf_ptr) {
     bme688_i2c_handle_t* handle = intf_ptr;
     I2C_TypeDef* I2Cx = handle->i2c;
-    return BME68X_E_NULL_PTR;
+    return I2C_ERROR_NULL_PTR;
 }
