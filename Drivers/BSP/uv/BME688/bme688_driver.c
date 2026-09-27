@@ -3,6 +3,9 @@
 #include "bme68x.h"
 
 bme688_status_t bme688_init(bme688_device_t *device, const bme688_i2c_handle_t *bus) {
+    if ( device == NULL || bus == NULL ) {
+        return BME688_ERROR_PARAM;
+    }
     device->i2c_bus = bus;
     device->chip_id = 0;
     device->is_initialized = 0;
@@ -25,6 +28,9 @@ bme688_status_t bme688_init(bme688_device_t *device, const bme688_i2c_handle_t *
 }
 
 bme688_status_t bme688_verify_chip_id(bme688_device_t *hw_handle) {
+    if ( hw_handle == NULL ) {
+        return BME688_ERROR_PARAM;
+    }
     uint8_t rx_buffer = 0;
     int8_t status = bme688_i2c_bus_read(BME68X_REG_CHIP_ID, &rx_buffer, 1U, (void *)hw_handle->i2c_bus);
     if ( status != I2C_OK ) {
