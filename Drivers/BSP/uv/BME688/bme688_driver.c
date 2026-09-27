@@ -2,12 +2,14 @@
 
 bme688_status_t bme688_init(bme688_device_t *device, const bme688_i2c_handle_t *bus) {
     device->i2c_bus = bus;
+    device->chip_id = 0;
     device->is_initialized = 0;
     bme688_status_t rc = bme688_verify_chip_id(device);
     if (rc != BME688_OK) {
         return rc;
     }
     device->is_initialized = 1;
+    device->chip_id = BME68X_CHIP_ID;
     return BME688_OK;
 }
 

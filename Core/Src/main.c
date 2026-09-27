@@ -155,23 +155,26 @@ int main(void)
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
-    if (w25q_spi_init(&w25q_spi3) != SPI_OK) {
-        g_w25q_last_error = W25Q_ERROR_SPI_FAIL;
-        Error_Handler();
-    }
-    g_w25q_last_error = w25q_init(&w25q_device, &w25q_spi3);
-    if (g_w25q_last_error != W25Q_OK) {
-        Error_Handler();
-    }
+  if (w25q_spi_init(&w25q_spi3) != SPI_OK) {
+    g_w25q_last_error = W25Q_ERROR_SPI_FAIL;
+    Error_Handler();
+  }
+  g_w25q_last_error = w25q_init(&w25q_device, &w25q_spi3);
+  if (g_w25q_last_error != W25Q_OK) {
+    Error_Handler();
+  }
 
-    g_w25q_last_error = w25q_self_test(&w25q_device);
-    if (g_w25q_last_error != W25Q_OK) {
-        Error_Handler();
-    }
+  g_w25q_last_error = w25q_self_test(&w25q_device);
+  if (g_w25q_last_error != W25Q_OK) {
+    Error_Handler();
+  }
 
-    if (bme688_i2c_init(&bme688_i2c2) != I2C_OK) {
-        Error_Handler();
-    }
+  if (bme688_i2c_init(&bme688_i2c2) != I2C_OK) {
+    Error_Handler();
+  }
+  if (bme688_init(&bme688_device, &bme688_i2c2) != BME688_OK) {
+    Error_Handler();
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
