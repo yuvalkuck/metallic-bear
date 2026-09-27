@@ -1,5 +1,8 @@
 #include "bme688_i2c.h"
 
+#define BME688_I2C_INIT_TIMEOUT 50000U
+#define BME688_I2C_POLL_TIMEOUT 150000U
+
 bme688_i2c_status_t bme688_i2c_init(const bme688_i2c_handle_t* hi2c) {
     if (hi2c == NULL || hi2c->i2c == NULL || hi2c->tim == NULL ||
         (hi2c->device != BME68X_I2C_ADDR_LOW && hi2c->device != BME68X_I2C_ADDR_HIGH)) {
@@ -10,7 +13,7 @@ bme688_i2c_status_t bme688_i2c_init(const bme688_i2c_handle_t* hi2c) {
         return I2C_ERROR_SELF_TEST;
     }
 
-    uint32_t timeout = 50000;
+    uint32_t timeout = BME688_I2C_INIT_TIMEOUT;
     while (!(I2Cx->ISR & I2C_ISR_STOPF)) {
         // If the BME688 responds with a NACK, clear flags and catch it immediately
         if (I2Cx->ISR & I2C_ISR_NACKF) { // on NACK flag we need to exit now.
@@ -80,7 +83,7 @@ void bme688_delay_us(uint32_t period, void* intf_ptr) {
  *        Optimized by the compiler to eliminate code duplication without a function call penalty.
  */
 static inline int8_t _i2c_poll_flag(I2C_TypeDef* I2Cx, uint32_t flag, uint32_t expected_mask) {
-    uint32_t timeout = 150000U;
+    uint32_t timeout = BME688_I2C_POLL_TIMEOUT;
 
     // Pure bitwise match: loops as long as the filtered bit does not match the target mask
     while ((I2Cx->ISR & flag) != expected_mask) {
