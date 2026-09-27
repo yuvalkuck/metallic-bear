@@ -8,6 +8,10 @@ bme688_status_t bme688_init(bme688_device_t *device, const bme688_i2c_handle_t *
     if (rc != BME688_OK) {
         return rc;
     }
+    device->api.intf     = BME68X_I2C_INTF;
+    device->api.read     = bme688_i2c_bus_read;
+    device->api.write    = bme688_i2c_bus_write;
+    device->api.delay_us = bme688_delay_us;
     device->is_initialized = 1;
     device->chip_id = BME68X_CHIP_ID;
     return BME688_OK;
