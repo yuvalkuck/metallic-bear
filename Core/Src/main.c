@@ -247,6 +247,8 @@ int main(void)
   if (g_bme688_last_error != BME688_OK) {
     Error_Handler();
   }
+
+  LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
   /* USER CODE END 2 */
 
   /* Infinite loop */
