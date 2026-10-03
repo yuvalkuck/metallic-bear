@@ -39,8 +39,8 @@ ADD_SUBDIRECTORY(cmake/stm32cubemx)
 ADD_SUBDIRECTORY(Drivers/BME68x)
 ADD_SUBDIRECTORY(Drivers/BSP/uv/BME688)
 ADD_SUBDIRECTORY(Drivers/BSP/uv/W25Qxx)
-#ADD_SUBDIRECTORY(Drivers/BSP/uv/SCD30)
-#ADD_SUBDIRECTORY(Drivers/BSP/uv/MQ7)
+ADD_SUBDIRECTORY(Drivers/BSP/uv/SCD30)
+ADD_SUBDIRECTORY(Drivers/BSP/uv/MQ7)
 
 # Link directories setup
 TARGET_LINK_DIRECTORIES(${CMAKE_PROJECT_NAME} PRIVATE
@@ -72,5 +72,7 @@ TARGET_LINK_LIBRARIES(${CMAKE_PROJECT_NAME}
         w25qxx_Driver
         bme68x_Driver
         bme688_Driver
+        scd30_Driver
+        mq7_Driver
         # Add user defined libraries
 )

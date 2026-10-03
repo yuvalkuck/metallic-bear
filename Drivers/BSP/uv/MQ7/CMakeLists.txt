@@ -13,6 +13,8 @@ TARGET_INCLUDE_DIRECTORIES(${LIBRARY_NAME} PUBLIC
 )
 
 TARGET_SOURCES(${LIBRARY_NAME} PRIVATE
+        adc.c
+        driver.c
 )
 
 target_link_libraries(${LIBRARY_NAME} PUBLIC

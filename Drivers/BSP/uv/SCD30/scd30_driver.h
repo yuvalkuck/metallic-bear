@@ -1,4 +1,4 @@
 #ifndef SCD30_DRIVER_H
 #define SCD30_DRIVER_H
-#include "uart.h"
+#include "scd30_uart.h"
 #endif

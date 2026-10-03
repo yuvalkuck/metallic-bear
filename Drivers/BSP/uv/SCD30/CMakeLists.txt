@@ -13,7 +13,7 @@ TARGET_INCLUDE_DIRECTORIES(${LIBRARY_NAME} PUBLIC
 )
 
 TARGET_SOURCES(${LIBRARY_NAME} PRIVATE
-        driver.c,
+        driver.c
         uart.c
 )
 
