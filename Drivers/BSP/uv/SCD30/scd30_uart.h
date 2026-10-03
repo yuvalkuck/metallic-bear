@@ -5,6 +5,8 @@
 
 typedef struct {
     USART_TypeDef* bus; // bus type
+    DMA_Channel_TypeDef* dma_tx;
+    DMA_Channel_TypeDef* dma_rx;
 } scd30_uart_handle_t;
 
 /**
@@ -20,5 +22,5 @@ typedef enum {
     UART_ERROR_NOT_IMPLEMENTED    = -5,
 } scd30_uart_error_t;
 
-scd30_uart_error_t scd30_uart_init(const scd30_uart_handle_t* hbus);
+scd30_uart_error_t scd30_uart_init(const scd30_uart_handle_t* handle);
 #endif
