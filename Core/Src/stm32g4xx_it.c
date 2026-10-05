@@ -41,6 +41,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
+extern void* scd30_irq_ctx[2]; /* [0] = scd30 uart handle, [1] = read properties; filled by the scd30 driver */
+extern void scd30_uart_idle_irq(void* handle, void* props);
 volatile uint32_t g_ms_ticks = 0;
 
 /* USER CODE END PV */
@@ -248,6 +250,7 @@ void USART3_IRQHandler(void)
 
   /* USER CODE END USART3_IRQn 0 */
   /* USER CODE BEGIN USART3_IRQn 1 */
+  scd30_uart_idle_irq(scd30_irq_ctx[0], scd30_irq_ctx[1]);
 
   /* USER CODE END USART3_IRQn 1 */
 }
