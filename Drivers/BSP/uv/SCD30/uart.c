@@ -1,6 +1,7 @@
 #include <stddef.h>
 
-#include "scd30_uart.h"
+#include "main.h" /* g_ms_ticks */
+#include "scd30_driver.h"
 
 #define DMA_CHANNEL_MAX 8U /* STM32G474: 8 channels per DMA controller */
 
@@ -45,4 +46,51 @@ scd30_uart_error_t scd30_uart_init(const scd30_uart_handle_t* handle) {
     handle->bus->CR1 |= USART_CR1_IDLEIE;
 
     return UART_OK;
+}
+
+scd30_uart_error_t scd30_uart_write(const scd30_uart_handle_t* h, scd30_read_properties_t* rp,
+                                    const uint8_t* tx, uint16_t tx_len) {
+    if (h == NULL || rp == NULL || tx == NULL || tx_len == 0 || rp->rx_buffer == NULL || rp->rx_cap == 0) {
+        return UART_ERROR_FRAME_MALFORMED;
+    }
+    if (rp->state != SCD30_UART_READY) {
+        return UART_ERROR_BUSY;
+    }
+    rp->state = SCD30_UART_READING;
+    rp->rx_len = 0;
+    rp->start_ms = g_ms_ticks;
+
+    h->dma_tx->CCR &= ~DMA_CCR_EN;
+    h->dma_rx->CCR &= ~DMA_CCR_EN;
+    h->bus->ICR = USART_ICR_IDLECF | USART_ICR_ORECF | USART_ICR_FECF | USART_ICR_NECF;
+    h->dma_ctrl->IFCR = dma_flag_mask(h->tx_ch) | dma_flag_mask(h->rx_ch);
+
+    // RX first: the reply can come fast
+    h->dma_rx->CMAR = (uint32_t)rp->rx_buffer;
+    h->dma_rx->CNDTR = rp->rx_cap;
+    h->dma_rx->CCR |= DMA_CCR_EN;
+
+    h->dma_tx->CMAR = (uint32_t)tx;
+    h->dma_tx->CNDTR = tx_len;
+    h->dma_tx->CCR |= DMA_CCR_EN;
+    return UART_OK;
+}
+
+void scd30_uart_idle_irq(const scd30_uart_handle_t* h, scd30_read_properties_t* rp) {
+    if (!(h->bus->ISR & USART_ISR_IDLE)) {
+        return;
+    }
+    h->bus->ICR = USART_ICR_IDLECF;
+    if (rp->state != SCD30_UART_READING) {
+        return;
+    }
+    h->dma_rx->CCR &= ~DMA_CCR_EN; // freezes CNDTR
+    rp->rx_len = rp->rx_cap - h->dma_rx->CNDTR;
+
+    scd30_uart_error_t err =
+        (h->bus->ISR & (USART_ISR_ORE | USART_ISR_FE | USART_ISR_NE)) ? UART_ERROR_RX_HW : UART_OK;
+    h->bus->ICR = USART_ICR_ORECF | USART_ICR_FECF | USART_ICR_NECF;
+
+    rp->read_cb(err, rp->rx_len);
+    rp->state = SCD30_UART_READY; // after the callback: a write() inside it gets BUSY
 }
