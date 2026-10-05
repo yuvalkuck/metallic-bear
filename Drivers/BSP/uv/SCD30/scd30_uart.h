@@ -4,9 +4,12 @@
 #include "stm32g474xx.h"
 
 typedef struct {
-    USART_TypeDef* bus; // bus type
+    USART_TypeDef* bus;    // bus type
+    DMA_TypeDef* dma_ctrl; // dma controller
     DMA_Channel_TypeDef* dma_tx;
     DMA_Channel_TypeDef* dma_rx;
+    uint8_t tx_ch; // channel index
+    uint8_t rx_ch; // channel index
 } scd30_uart_handle_t;
 
 /**
