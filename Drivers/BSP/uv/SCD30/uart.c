@@ -57,7 +57,6 @@ scd30_uart_error_t scd30_uart_write(const scd30_uart_handle_t* h, scd30_read_pro
         return UART_ERROR_BUSY;
     }
     rp->state = SCD30_UART_READING;
-    rp->rx_len = 0;
     rp->start_ms = g_ms_ticks;
 
     h->dma_tx->CCR &= ~DMA_CCR_EN;
@@ -85,12 +84,12 @@ void scd30_uart_idle_irq(const scd30_uart_handle_t* h, scd30_read_properties_t* 
         return;
     }
     h->dma_rx->CCR &= ~DMA_CCR_EN; // freezes CNDTR
-    rp->rx_len = rp->rx_cap - h->dma_rx->CNDTR;
+    uint16_t rx_len = rp->rx_cap - h->dma_rx->CNDTR;
 
     scd30_uart_error_t err =
         (h->bus->ISR & (USART_ISR_ORE | USART_ISR_FE | USART_ISR_NE)) ? UART_ERROR_RX_HW : UART_OK;
     h->bus->ICR = USART_ICR_ORECF | USART_ICR_FECF | USART_ICR_NECF;
 
-    rp->read_cb(err, rp->rx_len);
+    rp->read_cb(err, rx_len);
     rp->state = SCD30_UART_READY; // after the callback: a write() inside it gets BUSY
 }

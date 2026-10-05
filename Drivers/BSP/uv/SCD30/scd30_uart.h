@@ -40,7 +40,6 @@ typedef struct {
 typedef struct {
     uint8_t *rx_buffer;
     uint16_t rx_cap;
-    uint16_t rx_len; /* bytes actually received in the last reply */
     uint32_t start_ms;
     volatile scd30_uart_state_t state;
     scd30_uart_read_cb_t read_cb;

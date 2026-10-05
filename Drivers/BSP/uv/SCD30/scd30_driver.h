@@ -22,8 +22,8 @@ typedef enum {
     MODBUS_ERROR_NOT_IMPLEMENTED = 0x06
 } scd30_status_t;
 
-scd30_status_t scd30_init(scd30_device_t* device, const scd30_uart_handle_t* hbus);
+typedef void (*scd30_read_cb_t)(uint8_t *rx, uint16_t len);
+scd30_status_t scd30_init(scd30_device_t* device, const scd30_uart_handle_t* hbus, scd30_read_cb_t);
 
-void scd30_process(scd30_uart_error_t err, uint16_t len); /* called from scd30_uart_idle_irq with the received length */
 
 #endif

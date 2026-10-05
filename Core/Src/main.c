@@ -186,6 +186,10 @@ static bme688_status_t bme688_self_test(bme688_device_t* device) {
     return BME688_OK;
 }
 
+static void scd30_read_buffer(uint8_t *rx, uint16_t len) {
+
+}
+
 /* USER CODE END 0 */
 
 /**
@@ -259,10 +263,18 @@ int main(void)
         Error_Handler();
     }
 
+    /**
+     *          ------------ SCD30 -------------
+     */
     if (scd30_uart_init(&scd30_uart) != UART_OK) {
         Error_Handler();
     }
-    if (scd30_init(&scd30_device, &scd30_uart) != MODBUS_OK) {
+    uint8_t read_buf[65]; // add one for overflow
+    scd30_read_properties_t *props = &scd30_device.read_props;
+    props->rx_buffer = read_buf;
+    props->rx_cap = 64;
+
+    if (scd30_init(&scd30_device, &scd30_uart,scd30_read_buffer) != MODBUS_OK) {
         Error_Handler();
     }
 
