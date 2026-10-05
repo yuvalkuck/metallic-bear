@@ -35,7 +35,6 @@ typedef struct {
     DMA_Channel_TypeDef* dma_rx;
     uint8_t tx_ch; // channel index
     uint8_t rx_ch; // channel index
-    scd30_uart_read_cb_t read_cb;
 } scd30_uart_handle_t;
 
 typedef struct {
@@ -44,6 +43,7 @@ typedef struct {
     uint16_t rx_len; /* bytes actually received in the last reply */
     uint32_t start_ms;
     volatile scd30_uart_state_t state;
+    scd30_uart_read_cb_t read_cb;
 } scd30_read_properties_t;
 
 scd30_uart_error_t scd30_uart_init(const scd30_uart_handle_t* handle);

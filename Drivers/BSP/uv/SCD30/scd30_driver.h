@@ -24,6 +24,6 @@ typedef enum {
 
 scd30_status_t scd30_init(scd30_device_t* device, const scd30_uart_handle_t* hbus);
 
-void scd30_process(uint16_t len); /* called from scd30_uart_idle_irq with the received length */
+void scd30_process(scd30_uart_error_t err, uint16_t len); /* called from scd30_uart_idle_irq with the received length */
 
 #endif
