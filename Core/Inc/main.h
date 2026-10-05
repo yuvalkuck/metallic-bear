@@ -71,6 +71,7 @@ extern "C" {
 void Error_Handler(void);
 
 /* USER CODE BEGIN EFP */
+extern volatile uint32_t g_ms_ticks; /* 1 ms tick, incremented in SysTick_Handler */
 
 /* USER CODE END EFP */
 

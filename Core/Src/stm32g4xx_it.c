@@ -41,6 +41,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
+volatile uint32_t g_ms_ticks = 0;
 
 /* USER CODE END PV */
 
@@ -187,6 +188,7 @@ void SysTick_Handler(void)
   /* USER CODE END SysTick_IRQn 0 */
 
   /* USER CODE BEGIN SysTick_IRQn 1 */
+  g_ms_ticks++;
 
   /* USER CODE END SysTick_IRQn 1 */
 }
