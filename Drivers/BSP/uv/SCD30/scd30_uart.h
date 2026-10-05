@@ -14,7 +14,11 @@ typedef enum {
     UART_ERROR_FRAME_MALFORMED    = -3, /**< Response data length or structuring is invalid */
     UART_ERROR_EXCEPTION_RETURNED = -4, /**< Sensor returned an active Modbus exception code */
     UART_ERROR_NOT_IMPLEMENTED    = -5,
+    UART_ERROR_BUSY               = -6, /**< A request is still in flight */
+    UART_ERROR_RX_HW              = -7, /**< USART overrun / framing / noise during the reply */
 } scd30_uart_error_t;
+
+#define SCD30_UART_TIMEOUT_MS 100U
 
 typedef enum {
     SCD30_UART_READY = 0, /* no transfer in flight, write() allowed */
@@ -34,5 +38,16 @@ typedef struct {
     scd30_uart_read_cb_t read_cb;
 } scd30_uart_handle_t;
 
+typedef struct {
+    uint8_t *rx_buffer;
+    uint16_t rx_cap;
+    uint16_t rx_len; /* bytes actually received in the last reply */
+    uint32_t start_ms;
+    volatile scd30_uart_state_t state;
+} scd30_read_properties_t;
+
 scd30_uart_error_t scd30_uart_init(const scd30_uart_handle_t* handle);
+scd30_uart_error_t scd30_uart_write(const scd30_uart_handle_t* handle, scd30_read_properties_t* props,
+                                    const uint8_t* tx, uint16_t tx_len);
+void               scd30_uart_idle_irq(const scd30_uart_handle_t* handle, scd30_read_properties_t* props);
 #endif
