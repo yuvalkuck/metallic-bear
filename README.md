@@ -63,7 +63,7 @@ To master bare-metal peripheral programming from scratch, EnviLogger drivers are
 * **Delay source:** The Bosch BME68x sensor API requires a microsecond-resolution delay callback (`bme688_delay_us()` in `Drivers/BSP/uv/BME688/bme688_i2c.c`), which `HAL_Delay()` cannot provide since it's driven by the 1 kHz SysTick tick. TIM6 (a basic timer with no external pins, freeing it from pin-mux conflicts) is used as a free-running microsecond counter for this purpose instead.
 
 ### Phase 3: SCD30 Gas Array Module (UART Frame Parsing)
-* **Learning Intent:** Master asynchronous streaming, Direct Memory Access (DMA) channel processing utilizing a circular ring buffer design, and verification of multi-byte Modbus RTU checksum frames (CRC16).
+* **Learning Intent:** Master asynchronous streaming, Direct Memory Access (DMA) channel processing in normal mode with IDLE-line frame detection (re-armed before each request), and verification of multi-byte Modbus RTU checksum frames (CRC16).
 * **Why third:** Shifts focus from low-level register matching to heavy frame structure processing and error validation protocols.
 
 ### Phase 4: MQ7 Sensor Management (MCU Core Analog & Timers)
