@@ -45,7 +45,7 @@ bme688_i2c_handle_t bme688_i2c2 = {
 scd30_uart_handle_t scd30_uart = {
     USART3, DMA1,
     DMA1_Channel1, DMA1_Channel2,
-    LL_DMA_CHANNEL_1, LL_DMA_CHANNEL_2
+    1, 2 /* 1-based DMA channel numbers */
 };
 w25q_device_t w25q_device = {};
 bme688_device_t bme688_device = {};
