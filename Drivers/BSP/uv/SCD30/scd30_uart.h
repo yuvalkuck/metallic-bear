@@ -3,15 +3,6 @@
 #include <stdint.h>
 #include "stm32g474xx.h"
 
-typedef struct {
-    USART_TypeDef* bus;    // bus type
-    DMA_TypeDef* dma_ctrl; // dma controller
-    DMA_Channel_TypeDef* dma_tx;
-    DMA_Channel_TypeDef* dma_rx;
-    uint8_t tx_ch; // channel index
-    uint8_t rx_ch; // channel index
-} scd30_uart_handle_t;
-
 /**
  * @brief SCD30 USART Driver & Link-Layer Error Codes
  * Generated locally by your microcontroller's UART driver during parsing.
@@ -24,6 +15,24 @@ typedef enum {
     UART_ERROR_EXCEPTION_RETURNED = -4, /**< Sensor returned an active Modbus exception code */
     UART_ERROR_NOT_IMPLEMENTED    = -5,
 } scd30_uart_error_t;
+
+typedef enum {
+    SCD30_UART_READY = 0, /* no transfer in flight, write() allowed */
+    SCD30_UART_READING,   /* request sent, DMA collecting the reply */
+    SCD30_UART_DONE,      /* reply captured, callback pending       */
+} scd30_uart_state_t;
+
+typedef void (*scd30_uart_read_cb_t)(scd30_uart_error_t err, uint16_t len);
+
+typedef struct {
+    USART_TypeDef* bus;    // bus type
+    DMA_TypeDef* dma_ctrl; // dma controller
+    DMA_Channel_TypeDef* dma_tx;
+    DMA_Channel_TypeDef* dma_rx;
+    uint8_t tx_ch; // channel index
+    uint8_t rx_ch; // channel index
+    scd30_uart_read_cb_t read_cb;
+} scd30_uart_handle_t;
 
 scd30_uart_error_t scd30_uart_init(const scd30_uart_handle_t* handle);
 #endif

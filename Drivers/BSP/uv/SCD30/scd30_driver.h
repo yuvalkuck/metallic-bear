@@ -3,8 +3,16 @@
 #include "scd30_uart.h"
 
 typedef struct {
+    uint8_t *rx_buffer;
+    uint16_t rx_cap;
+    uint32_t start_ms;
+    volatile scd30_uart_state_t state;
+} scd30_read_properties_t;
+
+typedef struct {
     const scd30_uart_handle_t* hbus; /* Reference injection to the low-level bus */
-    uint8_t is_initialized;          /* Internal tracker boolean flag */
+    scd30_read_properties_t read_props;
+    uint8_t is_initialized; /* Internal tracker boolean flag */
 } scd30_device_t;
 
 /**
