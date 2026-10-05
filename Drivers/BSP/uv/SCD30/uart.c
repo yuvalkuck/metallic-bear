@@ -41,15 +41,5 @@ scd30_uart_error_t scd30_uart_init(const scd30_uart_handle_t* handle) {
     // write 1 to clear
     handle->dma_ctrl->IFCR = dma_flag_mask(handle->tx_ch) | dma_flag_mask(handle->rx_ch);
 
-    // 5. DMA interrupts: TX done (bookkeeping), RX full (overflow), transfer error on both.
-    // setup properties
-    handle->dma_tx->CCR |= DMA_CCR_TCIE | DMA_CCR_TEIE;
-    handle->dma_rx->CCR |= DMA_CCR_TCIE | DMA_CCR_TEIE;
-
-    // 6. USART interrupts: IDLE = end of frame (success path), EIE = FE/NE/ORE errors while in DMA mode.
-    // setup event of interrupts.
-    handle->bus->CR3 |= USART_CR3_EIE;
-    handle->bus->CR1 |= USART_CR1_IDLEIE;
-    // we will do enable again when we what to do something
     return UART_OK;
 }
