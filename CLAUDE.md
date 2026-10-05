@@ -17,7 +17,7 @@ Hardware pin map:
 |---|---|---|
 | SPI3 | PC10 CLK, PC11 MISO, PC12 MOSI, PB0 CS (soft NSS, GPIO output labeled `W25Q_CS`) | W25Q128 flash |
 | I2C2 | PC4 SCL, PA8 SDA | BME688 |
-| USART3 | PB10 TX, PB11 RX (+ RX DMA, normal mode, polled IDLE detect, no interrupts) | SCD30 Modbus, 19200 baud |
+| USART3 | PB10 TX, PB11 RX (+ RX DMA, normal mode, USART IDLE interrupt only, no DMA channel interrupts) | SCD30 Modbus, 19200 baud |
 | USART2 | PA2 TX, PA3 RX | VCP debug console via ST-LINK, 115200 baud, `printf` redirected here |
 | ADC1 | PA0 (IN1) | MQ7 analog read |
 | TIM1 | PC0 (CH1 PWM) | MQ7 heater drive |

@@ -41,5 +41,8 @@ scd30_uart_error_t scd30_uart_init(const scd30_uart_handle_t* handle) {
     // write 1 to clear
     handle->dma_ctrl->IFCR = dma_flag_mask(handle->tx_ch) | dma_flag_mask(handle->rx_ch);
 
+    // 5. IDLE interrupt = end of reply. The only interrupt source; no DMA channel interrupts.
+    handle->bus->CR1 |= USART_CR1_IDLEIE;
+
     return UART_OK;
 }
