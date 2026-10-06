@@ -4,7 +4,7 @@
 
 void* scd30_irq_ctx[2]; /* [0] = scd30_uart_handle_t*, [1] = scd30_read_properties_t*; read by stm32g4xx_it.c */
 static scd30_device_t* s_scd30_device;
-scd30_read_cb_t s_scd30_process;
+static scd30_read_cb_t s_scd30_process;
 
 static inline void scd30_driver_process(scd30_uart_error_t err, uint16_t len) {
     if (err == UART_OK) {
