@@ -24,6 +24,11 @@ scd30_status_t scd30_init(scd30_device_t* device, const scd30_uart_handle_t* hbu
     s_scd30_process = read_cb;
     scd30_irq_ctx[0] = (void*)hbus;
     scd30_irq_ctx[1] = &device->read_props;
+
     device->is_initialized = 1;
     return MODBUS_OK;
+}
+
+scd30_status_t scd30_get_fiemware_version(scd30_device_t* device, uint8_t* major, uint8_t* minor) {
+    return MODBUS_ERROR_NOT_IMPLEMENTED;
 }

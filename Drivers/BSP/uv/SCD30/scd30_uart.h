@@ -19,6 +19,7 @@ typedef enum {
 } scd30_uart_error_t;
 
 #define SCD30_UART_TIMEOUT_MS 100U
+#define SCD30_MODBUS_ID 0X61;
 
 typedef enum {
     SCD30_UART_READY = 0, /* no transfer in flight, write() allowed */
@@ -38,15 +39,40 @@ typedef struct {
 } scd30_uart_handle_t;
 
 typedef struct {
-    uint8_t *rx_buffer;
+    uint8_t* rx_buffer;
     uint16_t rx_cap;
     uint32_t start_ms;
     volatile scd30_uart_state_t state;
     scd30_uart_read_cb_t read_cb;
 } scd30_read_properties_t;
 
+typedef enum {
+    FC_READ_HOLDING         = 0x03,
+    FC_READ_INPUT           = 0x04,
+    FC_WRITE_SINGLE_HOLDING = 0x06,
+} modbus_function_code_t;
+#pragma pack(push, 1)
+typedef struct {
+    uint8_t hi; // MSB
+    uint8_t lo; // LSB
+} high_low_t;
+
+typedef struct {
+    uint8_t lo; // LSB
+    uint8_t hi; // MSB
+} low_high_t;
+
+typedef struct {
+    uint8_t slave_addr;    // Target device address (SCD30 is default 0x61) - SCD30_MODBUS_ID
+    uint8_t function_code; // Modbus FC (0x03, 0x04, or 0x06) - modbus_function_code_t
+    high_low_t command;    // 0x00nn
+    high_low_t data;       // Value to write or number of regs to read
+    low_high_t crc;        // Checksum validation
+} modbus_tx_frame_t;
+#pragma pack(pop)
+
 scd30_uart_error_t scd30_uart_init(const scd30_uart_handle_t* handle);
 scd30_uart_error_t scd30_uart_write(const scd30_uart_handle_t* handle, scd30_read_properties_t* props,
                                     const uint8_t* tx, uint16_t tx_len);
-void               scd30_uart_idle_irq(const scd30_uart_handle_t* handle, scd30_read_properties_t* props);
+void scd30_uart_idle_irq(const scd30_uart_handle_t* handle, scd30_read_properties_t* props);
 #endif
