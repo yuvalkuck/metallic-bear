@@ -9,7 +9,7 @@ MetallicBear (formerly "EnviLogger") is a bare-metal (no RTOS) firmware project 
 Drivers are built in a deliberate sequence, from simplest bus to most complex:
 1. **W25Q128 flash (SPI3)** — in progress (see `Drivers/BSP/uv/W25Qxx/`)
 2. **BME688 (I2C2)** — in progress (see `Drivers/BSP/uv/BME688/`)
-3. **SCD30 (USART3 + DMA, Modbus RTU/CRC16)** — not started
+3. **SCD30 (USART3 + DMA, Modbus RTU/CRC16)** — in progress (see `Drivers/BSP/uv/SCD30/`)
 4. **MQ7 (ADC1 + TIM1 PWM)** — not started (TIM1_CH1 PWM is configured in the `.ioc` on PC0, and both `TIM1_UP_TIM16_IRQn` and `ADC1_2_IRQn` are enabled in NVIC, but no driver code exists yet — see the TIM1/ADC1 interrupt note below)
 
 Hardware pin map:
@@ -17,7 +17,8 @@ Hardware pin map:
 |---|---|---|
 | SPI3 | PC10 CLK, PC11 MISO, PC12 MOSI, PB0 CS (soft NSS, GPIO output labeled `W25Q_CS`) | W25Q128 flash |
 | I2C2 | PC4 SCL, PA8 SDA | BME688 |
-| USART3 | PB10 TX, PB11 RX (+ RX DMA, normal mode, USART IDLE interrupt only, no DMA channel interrupts) | SCD30 Modbus, 19200 baud |
+| USART3 | PB10 TX, PB11 RX (+ TX DMA on DMA1_Channel1, RX DMA on DMA1_Channel2, both normal mode, USART IDLE interrupt only, no DMA channel interrupts) | SCD30 Modbus, 19200 baud |
+| TIM7 | none (internal) | SCD30 cycle timer: one-pulse, 10 kHz count (prescaler 16999), 16-bit ARR so max 6553 ms; shares `TIM7_DAC_IRQn` with DAC, so the handler checks `UIF` |
 | USART2 | PA2 TX, PA3 RX | VCP debug console via ST-LINK, 115200 baud, `printf` redirected here |
 | ADC1 | PA0 (IN1) | MQ7 analog read |
 | TIM1 | PC0 (CH1 PWM) | MQ7 heater drive |
@@ -60,5 +61,6 @@ There is no test suite in this repo (bare-metal firmware, HIL/manual test protoc
 - `Drivers/BME68x` — vendored Bosch official BME68x sensor API (third-party, not hand-written), built as its own `bme68x_Driver` object library and pulled in via `ADD_SUBDIRECTORY(Drivers/BME68x)` in the top-level `CMakeLists.txt`.
 - `Drivers/BSP/uv/W25Qxx` (`w25q_driver.c`/`.h`, `w25q_spi.c`/`.h`) — the custom, hand-written W25Q128 flash driver, split into a protocol layer (`w25q_driver`) and a low-level SPI transport layer (`w25q_spi`); this is the template for how future custom sensor drivers (SCD30, MQ7) should be structured. It has its own `CMakeLists.txt` (an `OBJECT` library named `w25qxx_Driver`, linked against `stm32cubemx`) and is pulled into the build via `ADD_SUBDIRECTORY(Drivers/BSP/uv/W25Qxx)` and `target_link_libraries(... w25qxx_Driver)` in the top-level `CMakeLists.txt` — there is no `cmake/w25qxx/` directory or `scope-share.cmake`/`STM_SET_LIBNAME()` macro in this repo; follow the simpler pattern actually used in `Drivers/BSP/uv/W25Qxx/CMakeLists.txt` for new drivers instead.
 - `Drivers/BSP/uv/BME688` (`bme688_driver.c`/`.h`, `bme688_i2c.c`/`.h`) — the custom BME688 driver, following the same protocol-layer/transport-layer split as W25Qxx: `bme688_i2c` is the low-level I2C transport (plus `bme688_delay_us()`, the TIM6-backed microsecond delay callback the Bosch API requires), and `bme688_driver` wraps the vendored `bme68x_Driver` (`Drivers/BME68x`) with this project's own init/self-test logic. Its `CMakeLists.txt` (`bme688_Driver` object library) links against both `bme68x_Driver` and `stm32cubemx`, and is pulled in via `ADD_SUBDIRECTORY(Drivers/BSP/uv/BME688)` in the top-level `CMakeLists.txt`.
+- `Drivers/BSP/uv/SCD30` (`uart.c`, `scd30_uart.h`, `driver.c`, `scd30_driver.h`) — the custom SCD30 driver, split into a UART layer and a driver layer that only calls down (the UART layer reports up through the `read_cb` function pointer, never by including the driver header). `uart.c` builds Modbus RTU frames and CRC itself (`fill_frame_`), and offers blocking `scd30_uart_write`/`scd30_uart_read` for setup and diagnostics, plus the DMA path: `scd30_uart_start` (sends the measurement-read frame by DMA, returns at once), `scd30_uart_stop` (aborts a request in flight, no callback) and `scd30_uart_idle_irq` (USART3 IDLE interrupt, calls `read_cb` with the raw reply, CRC included, and is wired in `USART3_IRQHandler`). `driver.c` runs the cycle: `scd30_run` writes start-measurement then arms TIM7, `scd30_timer_irq` (called from `TIM7_DAC_IRQHandler`) starts one request per tick, the reply callback re-arms TIM7 for `cycle_ms`, and `scd30_stop` cuts the cycle, aborts the request and writes stop-measurement. The caller fills `device->timer` and `device->cycle_ms` before `scd30_init`, and writes the sensor measurement interval (`cycle_ms / 1000` seconds) with `scd30_uart_write` before `scd30_run`; `cycle_ms` must stay longer than that interval. The user callback runs in interrupt context, so keep it short (no `printf`). Its `CMakeLists.txt` builds the `scd30_Driver` object library (linked against `stm32cubemx`), pulled in via `ADD_SUBDIRECTORY(Drivers/BSP/uv/SCD30)`.
 - `metallicbear.ioc` — the STM32CubeMX project file; peripheral/pin changes should generally be made here and regenerated, not by hand-editing generated `Core/` files outside `USER CODE` blocks.
 - `STM32G474xx_FLASH.ld`, `startup_stm32g474xx.s` — linker script and startup assembly, CubeMX/CMSIS-generated.

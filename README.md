@@ -44,6 +44,7 @@ graph TD
 | **SCD30** | Optical NDIR CO2 monitoring | Asynchronous UART | PB10 (TX), PB11 (RX) [USART3] | 3.3V - 5.5V DC VCC |
 | **BME688** | 4-in-1 Volatile Gas/IAQ | I2C Multi-Master Bus | PC4 (SCL), PA8 (SDA) [I2C2] | 1.2V - 3.6V DC VCC (3.3V Typ) |
 | **BME688 delay** | Microsecond delay source for the Bosch BME68x API's `bme688_delay_us()` callback | Timer (no I/O pin) | TIM6, internal only | N/A |
+| **SCD30 cycle timer** | One-pulse timer that paces the SCD30 request/reply cycle | Timer (no I/O pin) | TIM7, internal only | N/A |
 | **W25Q128**| 128M-bit Non-Volatile Flash | SPI Master Bus | PC10(CLK), PC11(MISO), PC12(MOSI), PB0(CS) [SPI3] | 2.7V - 3.6V DC VCC |
 | **Button B1** | Hardware Event Interrupt | External EXTI Line | PC13 (Hardwired Blue Switch) | Active-Low External Pull-up |
 
@@ -65,6 +66,47 @@ To master bare-metal peripheral programming from scratch, EnviLogger drivers are
 ### Phase 3: SCD30 Gas Array Module (UART Frame Parsing)
 * **Learning Intent:** Master asynchronous streaming, Direct Memory Access (DMA) channel processing in normal mode with the USART IDLE interrupt as the only interrupt (it marks the end of each reply; no DMA channel interrupts; RX re-armed before each request), and verification of multi-byte Modbus RTU checksum frames (CRC16).
 * **Why third:** Shifts focus from low-level register matching to heavy frame structure processing and error validation protocols.
+* **Cycle design:** After a one-time setup (measurement interval, then start-measurement), the sensor is read in a DMA + interrupt-only cycle with no CPU waiting. TIM7, a one-pulse timer, fires once per cycle and starts one request: the TX DMA sends the measurement-read frame and the RX DMA collects the reply. The USART3 IDLE interrupt marks the end of the reply, hands the full frame to the user callback, and re-arms TIM7 for the next cycle. TIM7 is also armed when the request starts, so if the sensor never answers it fires anyway, aborts the stuck request and runs the next cycle as after a success. `run` starts the sensor measurement and the cycle; `stop` breaks the cycle, aborts any request in flight and stops the sensor measurement. Setup and diagnostics use separate blocking register reads/writes, outside the cycle.
+
+```mermaid
+sequenceDiagram
+    participant App as main
+    participant T as TIM7 (one-pulse)
+    participant D as Driver (driver.c)
+    participant U as UART layer (uart.c)
+    participant DMA as DMA1 TX/RX
+    participant S as SCD30
+
+    Note over App,S: Setup, blocking, once
+    App->>S: scd30_uart_write(measurement interval)
+    App->>D: scd30_run()
+    D->>S: scd30_uart_write(start measurement)
+    D->>T: arm(cycle_ms)
+
+    Note over T,S: One cycle, DMA + interrupts only
+    T->>D: update interrupt, scd30_timer_irq()
+    D->>U: scd30_uart_start()
+    U->>DMA: arm RX, then TX (measurement-read frame + CRC)
+    D->>T: arm(cycle_ms) as the no-reply deadline
+    DMA->>S: request frame
+    S-->>DMA: reply frame
+    DMA-->>U: USART3 IDLE interrupt, end of reply
+    U->>D: read_cb(err, len)
+    D->>T: arm(cycle_ms), replaces the deadline
+    D->>App: user callback with the full raw frame
+
+    alt no reply
+        T->>D: deadline expires, state still READING
+        D->>U: scd30_uart_stop(), abort the request
+        D->>U: scd30_uart_start(), next cycle as after a success
+    end
+
+    Note over App,S: Break the cycle
+    App->>D: scd30_stop()
+    D->>T: disable interrupt and timer
+    D->>U: scd30_uart_stop()
+    D->>S: scd30_uart_write(stop measurement)
+```
 
 ### Phase 4: MQ7 Sensor Management (MCU Core Analog & Timers)
 * **Learning Intent:** Master internal microcontroller core configurations. Drive external transistor paths using hardware PWM outputs, execute tracking time profiles, and isolate analog read windows.
