@@ -30,5 +30,6 @@ scd30_status_t scd30_init(scd30_device_t* device, const scd30_uart_handle_t* hbu
 }
 
 scd30_status_t scd30_get_fiemware_version(scd30_device_t* device, uint8_t* major, uint8_t* minor) {
+
     return MODBUS_ERROR_NOT_IMPLEMENTED;
 }

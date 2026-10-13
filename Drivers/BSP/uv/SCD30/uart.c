@@ -3,21 +3,150 @@
 #include "main.h" /* g_ms_ticks */
 #include "scd30_driver.h"
 
+typedef enum {
+    SCD30_REPLY_OK           = 0x00, /* valid reply, not an exception */
+    SCD30_REPLY_EXC_FUNCTION = 0x01, /* exception: function code not supported */
+    SCD30_REPLY_EXC_ADDRESS  = 0x02, /* exception: register address does not exist */
+    SCD30_REPLY_EXC_VALUE    = 0x03, /* exception: value out of range */
+    SCD30_REPLY_EXC_DEVICE   = 0x04, /* exception: sensor internal error */
+    SCD30_REPLY_BAD_CRC      = 0xFE, /* complete frame, but the CRC does not match */
+    SCD30_REPLY_TIMEOUT      = 0xFF, /* nothing, or not enough bytes, arrived in time */
+} scd30_reply_status_t;
+
 #define DMA_CHANNEL_MAX 8U /* STM32G474: 8 channels per DMA controller */
+#define MODBUS_EXCEPTION_FLAG 0x80U
 
 // ch is the 1-based channel number: channel n owns IFCR bits [4(n-1) .. 4(n-1)+3] (GIF/TCIF/HTIF/TEIF).
 static inline uint32_t dma_flag_mask(uint8_t ch) {
     return 0xFU << ((ch - 1U) * 4U);
 }
 
+// Modbus RTU CRC16: init 0xFFFF, polynomial 0xA001. The result goes to the frame's crc field, low byte first.
+static void modbus_crc16(const uint8_t* buf, uint16_t len, low_high_t* crc) {
+    uint16_t value = 0xFFFFU;
+    for (uint16_t ii = 0; ii < len; ii++) {
+        value ^= buf[ii];
+        for (uint8_t bit = 0; bit < 8U; bit++) {
+            value = (value & 1U) ? (uint16_t)((value >> 1) ^ 0xA001U) : (uint16_t)(value >> 1);
+        }
+    }
+    crc->lo = (uint8_t)(value & 0xFFU);
+    crc->hi = (uint8_t)(value >> 8);
+}
+
+static inline uint8_t is_crc_ok(const uint8_t* frame, uint16_t len) {
+    if (len < 3U) {
+        return 0;
+    }
+    low_high_t crc;
+    modbus_crc16(frame, (uint16_t)(len - 2U), &crc);
+    return (crc.lo == frame[len - 2U]) && (crc.hi == frame[len - 1U]);
+}
+
+// Sends len bytes, polled, and waits until the last one is fully out. Blocking, with timeout.
+// Returns UART_OK, or UART_ERROR_TIMEOUT if the USART did not accept the bytes in time.
+static inline scd30_uart_error_t send_frame_(const scd30_uart_handle_t* handle, const modbus_tx_frame_t* frame) {
+    uint8_t* tx = (uint8_t*)frame;
+    uint8_t len = sizeof(modbus_tx_frame_t); // will be remove when needed
+    const uint32_t t0 = g_ms_ticks;
+    for (uint8_t ii = 0; ii < len; ii++) {
+        while (!(handle->bus->ISR & USART_ISR_TXE)) {
+            if ((uint32_t)(g_ms_ticks - t0) > SCD30_UART_TIMEOUT_MS) {
+                return UART_ERROR_TIMEOUT;
+            }
+        }
+        handle->bus->TDR = tx[ii];
+    }
+    while (!(handle->bus->ISR & USART_ISR_TC)) { // last byte fully out
+        if ((uint32_t)(g_ms_ticks - t0) > SCD30_UART_TIMEOUT_MS) {
+            return UART_ERROR_TIMEOUT;
+        }
+    }
+    return UART_OK;
+}
+
+static scd30_reply_status_t receive_and_validate(const scd30_uart_handle_t* handle,
+                                                 scd30_uart_response_t* response) {
+    const uint32_t t0 = g_ms_ticks; // timeout counts from the start of the receive
+    uint8_t expected = 3U;          // start with the header: address, function, third byte
+    for (uint8_t ii = 0; ii < expected; ii++) {
+        while (!(handle->bus->ISR & USART_ISR_RXNE)) {
+            if ((uint32_t)(g_ms_ticks - t0) > SCD30_UART_TIMEOUT_MS) {
+                return SCD30_REPLY_TIMEOUT;
+            }
+        }
+        response->raw[ii] = (uint8_t)handle->bus->RDR;
+        if (ii == 2U) {                                     // header complete: now the length is known
+            if (response->raw[1] & MODBUS_EXCEPTION_FLAG) { // bit 7 of the function code: exception reply
+                expected = 5U;                              // address, function, code, crc lo, crc hi
+            } else if (response->raw[1] == FC_WRITE_SINGLE_HOLDING) {
+                expected = 8U; // echo of the request
+            } else {
+                expected = (uint8_t)(5U + response->raw[2]); // header + data (byte count) + crc
+            }
+            if (expected > SCD30_RX_MAX) {
+                return SCD30_REPLY_BAD_CRC; // length field is nonsense: damaged frame
+            }
+        }
+    }
+    if (!is_crc_ok(response->raw, expected)) {
+        return SCD30_REPLY_BAD_CRC;
+    }
+    if (response->raw[1] & MODBUS_EXCEPTION_FLAG) {
+        return (scd30_reply_status_t)response->exception_t.code; // 1..4 = the sensor's exception code
+    }
+    return SCD30_REPLY_OK;
+}
+
+// return 0 mean no response
+// return 0xFFFF mean
+uint16_t scd30_firmware_version(const scd30_uart_handle_t* handle) {
+    if (handle == NULL) {
+        return 0;
+    }
+
+    modbus_tx_frame_t frame;
+    frame.slave_addr = SCD30_MODBUS_ID;
+    frame.function_code = FC_READ_HOLDING;
+    frame.reg_command.hi = (uint8_t)(SCD30_REG_FIRMWARE_VERSION >> 8);
+    frame.reg_command.lo = (uint8_t)(SCD30_REG_FIRMWARE_VERSION & 0xFFU);
+    frame.data.hi = 0x00; // register count: 1
+    frame.data.lo = 0x01;
+    modbus_crc16((const uint8_t*)&frame, 6U, &frame.crc);
+
+    handle->bus->ICR = USART_ICR_IDLECF | USART_ICR_ORECF | USART_ICR_FECF | USART_ICR_NECF;
+    while (handle->bus->ISR & USART_ISR_RXNE) { // drop stale bytes
+        (void)handle->bus->RDR;
+    }
+
+    if (send_frame_(handle, &frame) != UART_OK) {
+        return 0;
+    }
+
+    // receive the reply: 7 bytes (61 03 02 hi lo crcLo crcHi), or 5 bytes for an exception
+    scd30_uart_response_t response;
+    scd30_reply_status_t status = receive_and_validate(handle, &response);
+    if (status > SCD30_REPLY_OK) {
+        return (status == SCD30_REPLY_TIMEOUT) ? 0 : 0xFFFFU;
+    }
+    if (response.data_t.addr != frame.slave_addr ||
+        response.data_t.function != FC_READ_HOLDING ||
+        response.data_t.byte_count != 2U) {
+        return 0;
+    }
+    return (uint16_t)(((uint16_t)response.data_t.data[0] << 8) | response.data_t.data[1]);
+}
+
+///////////////////////////////////////////////////////////////////////////////////////
+
 scd30_uart_error_t scd30_uart_init(const scd30_uart_handle_t* handle) {
     if (handle == NULL || handle->bus == NULL || handle->dma_ctrl == NULL ||
         handle->dma_tx == NULL || handle->dma_rx == NULL) {
-        return UART_ERROR_FRAME_MALFORMED;
+        return UART_ERROR_INVALID_PARAMS;
     }
     if (handle->tx_ch < 1U || handle->tx_ch > DMA_CHANNEL_MAX ||
         handle->rx_ch < 1U || handle->rx_ch > DMA_CHANNEL_MAX) {
-        return UART_ERROR_FRAME_MALFORMED;
+        return UART_ERROR_INVALID_PARAMS;
     }
 
     // 1. start modify by diable first - Channels must be disabled before CPAR/CMAR/CNDTR can be written.
@@ -48,10 +177,105 @@ scd30_uart_error_t scd30_uart_init(const scd30_uart_handle_t* handle) {
     return UART_OK;
 }
 
-scd30_uart_error_t scd30_uart_write(const scd30_uart_handle_t* h, scd30_read_properties_t* rp,
+scd30_uart_error_t scd30_uart_write(const scd30_uart_handle_t* handle, scd30_register_t command, uint16_t data,
+                                    scd30_uart_response_t* response) {
+    if (handle == NULL || response == NULL) {
+        return UART_ERROR_INVALID_PARAMS;
+    }
+    modbus_tx_frame_t frame;
+
+    frame.slave_addr = SCD30_MODBUS_ID;
+    frame.function_code = FC_WRITE_SINGLE_HOLDING;
+    frame.reg_command.hi = (uint8_t)(command >> 8);
+    frame.reg_command.lo = (uint8_t)(command & 0xFFU);
+    frame.data.hi = (uint8_t)(data >> 8);
+    frame.data.lo = (uint8_t)(data & 0xFFU);
+    modbus_crc16((const uint8_t*)&frame, 6U, &frame.crc);
+
+    if (send_frame_(handle, &frame) != UART_OK) {
+        return UART_ERROR_TIMEOUT;
+    }
+    scd30_reply_status_t status = receive_and_validate(handle, response);
+    if (status > SCD30_REPLY_OK) {
+        if (status == SCD30_REPLY_TIMEOUT) {
+            return UART_ERROR_TIMEOUT;
+        }
+        if (status == SCD30_REPLY_BAD_CRC) {
+            return UART_ERROR_CRC_MISMATCH;
+        }
+        return UART_ERROR_EXCEPTION_RETURNED;
+    }
+
+    // a good write is echoed back unchanged
+    // if (response->accepted_t.addr != frame.slave_addr ||
+    //     response->accepted_t.function != FC_WRITE_SINGLE_HOLDING ||
+    //     response->accepted_t.reg.hi != frame.reg_command.hi ||
+    //     response->accepted_t.reg.lo != frame.reg_command.lo ||
+    //     response->accepted_t.value.hi != frame.data.hi ||
+    //     response->accepted_t.value.lo != frame.data.lo) {
+    //     return UART_ERROR_FRAME_MALFORMED;
+    // }
+    return UART_OK;
+}
+
+scd30_uart_error_t scd30_uart_read(const scd30_uart_handle_t* handle, scd30_register_t command,
+                                   scd30_uart_response_t* response) {
+    if (handle == NULL || response == NULL) {
+        return UART_ERROR_INVALID_PARAMS;
+    }
+    modbus_tx_frame_t frame;
+
+    const uint16_t count = (command == SCD30_REG_READ_MEASUREMENT_BLOCK) ? SCD30_MEASUREMENT_REGS : SCD30_SINGLE_REG;
+    frame.slave_addr = SCD30_MODBUS_ID;
+    switch (command) {
+        case SCD30_REG_DATA_READY_STATUS:
+        case SCD30_REG_READ_MEASUREMENT_BLOCK:
+            frame.function_code = FC_READ_INPUT;
+            break;
+        case SCD30_REG_MEASUREMENT_INTERVAL:
+        case SCD30_REG_AUTOMATIC_SELF_CALIBRATION:
+        case SCD30_REG_FORCED_RECALIBRATION:
+        case SCD30_REG_TEMPERATURE_OFFSET:
+        case SCD30_REG_ALTITUDE_COMPENSATION:
+        case SCD30_REG_FIRMWARE_VERSION:
+            frame.function_code = FC_READ_HOLDING;
+            break;
+        default: // write-only registers (start, stop, soft reset) or unknown
+            return UART_ERROR_INVALID_PARAMS;
+    }
+    frame.reg_command.hi = (uint8_t)(command >> 8);
+    frame.reg_command.lo = (uint8_t)(command & 0xFFU);
+    frame.data.hi = (uint8_t)(count >> 8);
+    frame.data.lo = (uint8_t)(count & 0xFFU);
+    modbus_crc16((const uint8_t*)&frame, 6U, &frame.crc);
+
+    if (send_frame_(handle, &frame) != UART_OK) {
+        return UART_ERROR_TIMEOUT;
+    }
+    scd30_reply_status_t status = receive_and_validate(handle, response);
+    if (status > SCD30_REPLY_OK) {
+        if (status == SCD30_REPLY_TIMEOUT) {
+            return UART_ERROR_TIMEOUT;
+        }
+        if (status == SCD30_REPLY_BAD_CRC) {
+            return UART_ERROR_CRC_MISMATCH;
+        }
+        return UART_ERROR_EXCEPTION_RETURNED;
+    }
+
+    // a good read answers with the same function code and 2 bytes per register
+    // if (response->data_t.addr != frame.slave_addr ||
+    //     response->data_t.function != frame.function_code ||
+    //     response->data_t.byte_count != 2U * count) {
+    //     return UART_ERROR_FRAME_MALFORMED;
+    // }
+    return UART_OK;
+}
+
+scd30_uart_error_t scd30_uart_start(const scd30_uart_handle_t* handle, scd30_read_properties_t* rp,
                                     const uint8_t* tx, uint16_t tx_len) {
-    if (h == NULL || rp == NULL || tx == NULL || tx_len == 0 || rp->rx_buffer == NULL || rp->rx_cap == 0) {
-        return UART_ERROR_FRAME_MALFORMED;
+    if (handle == NULL || rp == NULL || tx == NULL || tx_len == 0 || rp->rx_buffer == NULL || rp->rx_cap == 0) {
+        return UART_ERROR_INVALID_PARAMS;
     }
     if (rp->state != SCD30_UART_READY) {
         return UART_ERROR_BUSY;
@@ -59,19 +283,19 @@ scd30_uart_error_t scd30_uart_write(const scd30_uart_handle_t* h, scd30_read_pro
     rp->state = SCD30_UART_READING;
     rp->start_ms = g_ms_ticks;
 
-    h->dma_tx->CCR &= ~DMA_CCR_EN;
-    h->dma_rx->CCR &= ~DMA_CCR_EN;
-    h->bus->ICR = USART_ICR_IDLECF | USART_ICR_ORECF | USART_ICR_FECF | USART_ICR_NECF;
-    h->dma_ctrl->IFCR = dma_flag_mask(h->tx_ch) | dma_flag_mask(h->rx_ch);
+    handle->dma_tx->CCR &= ~DMA_CCR_EN;
+    handle->dma_rx->CCR &= ~DMA_CCR_EN;
+    handle->bus->ICR = USART_ICR_IDLECF | USART_ICR_ORECF | USART_ICR_FECF | USART_ICR_NECF;
+    handle->dma_ctrl->IFCR = dma_flag_mask(handle->tx_ch) | dma_flag_mask(handle->rx_ch);
 
     // RX first: the reply can come fast
-    h->dma_rx->CMAR = (uint32_t)rp->rx_buffer;
-    h->dma_rx->CNDTR = rp->rx_cap;
-    h->dma_rx->CCR |= DMA_CCR_EN;
+    handle->dma_rx->CMAR = (uint32_t)rp->rx_buffer;
+    handle->dma_rx->CNDTR = rp->rx_cap;
+    handle->dma_rx->CCR |= DMA_CCR_EN;
 
-    h->dma_tx->CMAR = (uint32_t)tx;
-    h->dma_tx->CNDTR = tx_len;
-    h->dma_tx->CCR |= DMA_CCR_EN;
+    handle->dma_tx->CMAR = (uint32_t)tx;
+    handle->dma_tx->CNDTR = tx_len;
+    handle->dma_tx->CCR |= DMA_CCR_EN;
     return UART_OK;
 }
 
