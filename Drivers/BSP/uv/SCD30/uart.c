@@ -1,7 +1,7 @@
 #include <stddef.h>
 
 #include "main.h" /* g_ms_ticks */
-#include "scd30_driver.h"
+#include "scd30_uart.h"
 
 typedef enum {
     SCD30_REPLY_OK           = 0x00, /* valid reply, not an exception */
@@ -41,6 +41,17 @@ static inline uint8_t is_crc_ok(const uint8_t* frame, uint16_t len) {
     low_high_t crc;
     modbus_crc16(frame, (uint16_t)(len - 2U), &crc);
     return (crc.lo == frame[len - 2U]) && (crc.hi == frame[len - 1U]);
+}
+
+// Fills a request frame: address, function code, register, data, then the CRC over the first 6 bytes.
+static void fill_frame_(modbus_tx_frame_t* frame, modbus_function_code_t fc, scd30_register_t command, uint16_t data) {
+    frame->slave_addr = SCD30_MODBUS_ID;
+    frame->function_code = fc;
+    frame->reg_command.hi = (uint8_t)(command >> 8);
+    frame->reg_command.lo = (uint8_t)(command & 0xFFU);
+    frame->data.hi = (uint8_t)(data >> 8);
+    frame->data.lo = (uint8_t)(data & 0xFFU);
+    modbus_crc16((const uint8_t*)frame, 6U, &frame->crc);
 }
 
 // Sends len bytes, polled, and waits until the last one is fully out. Blocking, with timeout.
@@ -144,14 +155,7 @@ scd30_uart_error_t scd30_uart_write(const scd30_uart_handle_t* handle, scd30_reg
         return UART_ERROR_INVALID_PARAMS;
     }
     modbus_tx_frame_t frame;
-
-    frame.slave_addr = SCD30_MODBUS_ID;
-    frame.function_code = FC_WRITE_SINGLE_HOLDING;
-    frame.reg_command.hi = (uint8_t)(command >> 8);
-    frame.reg_command.lo = (uint8_t)(command & 0xFFU);
-    frame.data.hi = (uint8_t)(data >> 8);
-    frame.data.lo = (uint8_t)(data & 0xFFU);
-    modbus_crc16((const uint8_t*)&frame, 6U, &frame.crc);
+    fill_frame_(&frame, FC_WRITE_SINGLE_HOLDING, command, data);
 
     if (send_frame_(handle, &frame) != UART_OK) {
         return UART_ERROR_TIMEOUT;
@@ -233,20 +237,25 @@ scd30_uart_error_t scd30_uart_read(const scd30_uart_handle_t* handle, scd30_regi
     return UART_OK;
 }
 
-scd30_uart_error_t scd30_uart_start(const scd30_uart_handle_t* handle, scd30_read_properties_t* rp,
-                                    const uint8_t* tx, uint16_t tx_len) {
-    if (handle == NULL || rp == NULL || tx == NULL || tx_len == 0 || rp->rx_buffer == NULL || rp->rx_cap == 0) {
+static modbus_tx_frame_t s_dma_frame; // static: DMA reads it after start returns
+
+// One measurement read by DMA, returns at once; the reply comes in read_cb.
+scd30_uart_error_t scd30_uart_start(const scd30_uart_handle_t* handle, scd30_read_properties_t* rp) {
+    if (handle == NULL || rp == NULL || rp->rx_buffer == NULL || rp->rx_cap == 0) {
         return UART_ERROR_INVALID_PARAMS;
     }
     if (rp->state != SCD30_UART_READY) {
         return UART_ERROR_BUSY;
     }
+    fill_frame_(&s_dma_frame, FC_READ_INPUT, SCD30_REG_READ_MEASUREMENT_BLOCK, SCD30_MEASUREMENT_REGS); // data = register count
+
     rp->state = SCD30_UART_READING;
     rp->start_ms = g_ms_ticks;
 
     handle->dma_tx->CCR &= ~DMA_CCR_EN;
     handle->dma_rx->CCR &= ~DMA_CCR_EN;
     handle->bus->ICR = USART_ICR_IDLECF | USART_ICR_ORECF | USART_ICR_FECF | USART_ICR_NECF;
+    handle->bus->RQR = USART_RQR_RXFRQ; // flush RDR: DMA would take a stale byte as reply byte 0
     handle->dma_ctrl->IFCR = dma_flag_mask(handle->tx_ch) | dma_flag_mask(handle->rx_ch);
 
     // RX first: the reply can come fast
@@ -254,9 +263,24 @@ scd30_uart_error_t scd30_uart_start(const scd30_uart_handle_t* handle, scd30_rea
     handle->dma_rx->CNDTR = rp->rx_cap;
     handle->dma_rx->CCR |= DMA_CCR_EN;
 
-    handle->dma_tx->CMAR = (uint32_t)tx;
-    handle->dma_tx->CNDTR = tx_len;
+    handle->dma_tx->CMAR = (uint32_t)&s_dma_frame;
+    handle->dma_tx->CNDTR = sizeof(s_dma_frame);
     handle->dma_tx->CCR |= DMA_CCR_EN;
+    return UART_OK;
+}
+
+// Aborts a request in flight. No callback. Safe to call when idle.
+scd30_uart_error_t scd30_uart_stop(const scd30_uart_handle_t* handle, scd30_read_properties_t* rp) {
+    if (handle == NULL || rp == NULL) {
+        return UART_ERROR_INVALID_PARAMS;
+    }
+    rp->state = SCD30_UART_READY; // first: the IDLE ISR returns early once the state is not READING
+
+    handle->dma_tx->CCR &= ~DMA_CCR_EN;
+    handle->dma_rx->CCR &= ~DMA_CCR_EN;
+    handle->bus->ICR = USART_ICR_IDLECF | USART_ICR_ORECF | USART_ICR_FECF | USART_ICR_NECF;
+    handle->bus->RQR = USART_RQR_RXFRQ; // drop a byte of the aborted reply
+    handle->dma_ctrl->IFCR = dma_flag_mask(handle->tx_ch) | dma_flag_mask(handle->rx_ch);
     return UART_OK;
 }
 

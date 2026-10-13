@@ -49,7 +49,9 @@ scd30_uart_handle_t scd30_uart = {
 };
 w25q_device_t w25q_device = {};
 bme688_device_t bme688_device = {};
-scd30_device_t scd30_device = {};
+scd30_device_t scd30_device = {
+    .timer = TIM7, .cycle_ms = 5000
+};
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -79,6 +81,7 @@ static void MX_USART3_UART_Init(void);
 static void MX_ADC1_Init(void);
 static void MX_TIM6_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -186,9 +189,7 @@ static bme688_status_t bme688_self_test(bme688_device_t* device) {
     return BME688_OK;
 }
 
-static void scd30_read_buffer(uint8_t *rx, uint16_t len) {
-
-}
+static void scd30_read_buffer(uint8_t* rx, uint16_t len) {}
 
 /* USER CODE END 0 */
 
@@ -236,6 +237,7 @@ int main(void)
   MX_ADC1_Init();
   MX_TIM6_Init();
   MX_TIM1_Init();
+  MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
 
     if (w25q_spi_init(&w25q_spi3) != SPI_OK) {
@@ -270,11 +272,21 @@ int main(void)
         Error_Handler();
     }
     uint8_t read_buf[65]; // add one for overflow
-    scd30_read_properties_t *props = &scd30_device.read_props;
+    scd30_read_properties_t* props = &scd30_device.read_props;
     props->rx_buffer = read_buf;
     props->rx_cap = 64;
 
-    if (scd30_init(&scd30_device, &scd30_uart,scd30_read_buffer) != MODBUS_OK) {
+    if (scd30_init(&scd30_device, &scd30_uart, scd30_read_buffer) != MODBUS_OK) {
+        Error_Handler();
+    }
+
+    // sensor setup, before the DMA cycle runs
+    scd30_uart_response_t scd30_resp;
+    if (scd30_uart_write(&scd30_uart, SCD30_REG_MEASUREMENT_INTERVAL, (uint16_t)(scd30_device.cycle_ms / 1000U),
+                         &scd30_resp) != UART_OK) {
+        Error_Handler();
+    }
+    if (scd30_run(&scd30_device) != MODBUS_OK) {
         Error_Handler();
     }
 
@@ -685,6 +697,44 @@ static void MX_TIM6_Init(void)
   /* USER CODE BEGIN TIM6_Init 2 */
 
   /* USER CODE END TIM6_Init 2 */
+
+}
+
+/**
+  * @brief TIM7 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM7_Init(void)
+{
+
+  /* USER CODE BEGIN TIM7_Init 0 */
+
+  /* USER CODE END TIM7_Init 0 */
+
+  LL_TIM_InitTypeDef TIM_InitStruct = {0};
+
+  /* Peripheral clock enable */
+  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM7);
+
+  /* TIM7 interrupt Init */
+  NVIC_SetPriority(TIM7_DAC_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
+  NVIC_EnableIRQ(TIM7_DAC_IRQn);
+
+  /* USER CODE BEGIN TIM7_Init 1 */
+
+  /* USER CODE END TIM7_Init 1 */
+  TIM_InitStruct.Prescaler = 16999;
+  TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_UP;
+  TIM_InitStruct.Autoreload = 65535;
+  LL_TIM_Init(TIM7, &TIM_InitStruct);
+  LL_TIM_DisableARRPreload(TIM7);
+  LL_TIM_SetOnePulseMode(TIM7, LL_TIM_ONEPULSEMODE_SINGLE);
+  LL_TIM_SetTriggerOutput(TIM7, LL_TIM_TRGO_RESET);
+  LL_TIM_DisableMasterSlaveMode(TIM7);
+  /* USER CODE BEGIN TIM7_Init 2 */
+
+  /* USER CODE END TIM7_Init 2 */
 
 }
 

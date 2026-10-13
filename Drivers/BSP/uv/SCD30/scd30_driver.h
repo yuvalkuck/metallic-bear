@@ -3,6 +3,8 @@
 #include "scd30_uart.h"
 
 typedef struct {
+    TIM_TypeDef* timer;  /* cycle timer, counts at 10 kHz */
+    uint32_t cycle_ms;
     const scd30_uart_handle_t* hbus; /* Reference injection to the low-level bus */
     scd30_read_properties_t read_props;
     uint8_t is_initialized; /* Internal tracker boolean flag */
@@ -23,8 +25,13 @@ typedef enum {
 } scd30_status_t;
 
 
+#define SCD30_CYCLE_MAX_MS 6553U /* 16-bit ARR at 10 kHz */
+
 typedef void (*scd30_read_cb_t)(uint8_t* rx, uint16_t len);
 scd30_status_t scd30_init(scd30_device_t* device, const scd30_uart_handle_t* hbus, scd30_read_cb_t);
 scd30_status_t scd30_get_firmware_version(scd30_device_t* device, uint8_t* major, uint8_t* minor);
+scd30_status_t scd30_run(scd30_device_t* device);
+void scd30_stop(scd30_device_t* device);
+void scd30_timer_irq(void); /* from TIM7_DAC_IRQHandler */
 
 #endif

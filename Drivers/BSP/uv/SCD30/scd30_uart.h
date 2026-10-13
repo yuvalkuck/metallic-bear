@@ -118,8 +118,8 @@ scd30_uart_error_t scd30_uart_init(const scd30_uart_handle_t* handle);
 scd30_uart_error_t scd30_uart_write(const scd30_uart_handle_t* handle, scd30_register_t command, uint16_t data, scd30_uart_response_t *response);
 scd30_uart_error_t scd30_uart_read(const scd30_uart_handle_t* handle, scd30_register_t command, scd30_uart_response_t *response);
 // DMA start
-scd30_uart_error_t scd30_uart_start(const scd30_uart_handle_t* handle, scd30_read_properties_t* props,
-                                    const uint8_t* tx, uint16_t tx_len);
+scd30_uart_error_t scd30_uart_start(const scd30_uart_handle_t* handle, scd30_read_properties_t* props);
+scd30_uart_error_t scd30_uart_stop(const scd30_uart_handle_t* handle, scd30_read_properties_t* props);
 
 void scd30_uart_idle_irq(const scd30_uart_handle_t* handle, scd30_read_properties_t* props);
 #endif
