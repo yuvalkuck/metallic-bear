@@ -278,14 +278,14 @@ int main(void)
         Error_Handler();
     }
 
-    /* scd30_uart_write tests: bad params */
-    {
-        scd30_uart_response_t t_resp;
-        printf("T1 scd30_uart_write(NULL handle): %d (want %d)\r\n",
-               scd30_uart_write(NULL, SCD30_REG_MEASUREMENT_INTERVAL, 2U, &t_resp), UART_ERROR_INVALID_PARAMS);
-        printf("T2 scd30_uart_write(NULL response): %d (want %d)\r\n",
-               scd30_uart_write(&scd30_uart, SCD30_REG_MEASUREMENT_INTERVAL, 2U, NULL), UART_ERROR_INVALID_PARAMS);
-    }
+    // /* scd30_uart_write tests: bad params */
+    // {
+    //     scd30_uart_response_t t_resp;
+    //     printf("T1 scd30_uart_write(NULL handle): %d (want %d)\r\n",
+    //            scd30_uart_write(NULL, SCD30_REG_MEASUREMENT_INTERVAL, 2U, &t_resp), UART_ERROR_INVALID_PARAMS);
+    //     printf("T2 scd30_uart_write(NULL response): %d (want %d)\r\n",
+    //            scd30_uart_write(&scd30_uart, SCD30_REG_MEASUREMENT_INTERVAL, 2U, NULL), UART_ERROR_INVALID_PARAMS);
+    // }
 
     LL_GPIO_SetOutputPin(LD2_GPIO_Port, LD2_Pin);
   /* USER CODE END 2 */

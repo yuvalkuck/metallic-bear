@@ -29,7 +29,21 @@ scd30_status_t scd30_init(scd30_device_t* device, const scd30_uart_handle_t* hbu
     return MODBUS_OK;
 }
 
-scd30_status_t scd30_get_fiemware_version(scd30_device_t* device, uint8_t* major, uint8_t* minor) {
+scd30_status_t scd30_get_firmware_version(scd30_device_t* device, uint8_t* major, uint8_t* minor) {
+    if (device == NULL || device->hbus == NULL || major == NULL || minor == NULL) {
+        return MODBUS_ERROR_PARAMETER;
+    }
 
-    return MODBUS_ERROR_NOT_IMPLEMENTED;
+    scd30_uart_response_t response;
+    scd30_uart_error_t err = scd30_uart_read(device->hbus, SCD30_REG_FIRMWARE_VERSION, &response);
+    if (err == UART_ERROR_EXCEPTION_RETURNED) {
+        return (scd30_status_t)response.exception_t.code; // 1..4 matches the MODBUS_ERROR_* values
+    }
+    if (err != UART_OK) {
+        return MODBUS_ERROR_DEVICE_FAIL; // timeout, CRC, malformed
+    }
+
+    *major = response.data_t.data[0];
+    *minor = response.data_t.data[1];
+    return MODBUS_OK;
 }

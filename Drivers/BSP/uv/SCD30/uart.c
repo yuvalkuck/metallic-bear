@@ -98,45 +98,6 @@ static scd30_reply_status_t receive_and_validate(const scd30_uart_handle_t* hand
     return SCD30_REPLY_OK;
 }
 
-// return 0 mean no response
-// return 0xFFFF mean
-uint16_t scd30_firmware_version(const scd30_uart_handle_t* handle) {
-    if (handle == NULL) {
-        return 0;
-    }
-
-    modbus_tx_frame_t frame;
-    frame.slave_addr = SCD30_MODBUS_ID;
-    frame.function_code = FC_READ_HOLDING;
-    frame.reg_command.hi = (uint8_t)(SCD30_REG_FIRMWARE_VERSION >> 8);
-    frame.reg_command.lo = (uint8_t)(SCD30_REG_FIRMWARE_VERSION & 0xFFU);
-    frame.data.hi = 0x00; // register count: 1
-    frame.data.lo = 0x01;
-    modbus_crc16((const uint8_t*)&frame, 6U, &frame.crc);
-
-    handle->bus->ICR = USART_ICR_IDLECF | USART_ICR_ORECF | USART_ICR_FECF | USART_ICR_NECF;
-    while (handle->bus->ISR & USART_ISR_RXNE) { // drop stale bytes
-        (void)handle->bus->RDR;
-    }
-
-    if (send_frame_(handle, &frame) != UART_OK) {
-        return 0;
-    }
-
-    // receive the reply: 7 bytes (61 03 02 hi lo crcLo crcHi), or 5 bytes for an exception
-    scd30_uart_response_t response;
-    scd30_reply_status_t status = receive_and_validate(handle, &response);
-    if (status > SCD30_REPLY_OK) {
-        return (status == SCD30_REPLY_TIMEOUT) ? 0 : 0xFFFFU;
-    }
-    if (response.data_t.addr != frame.slave_addr ||
-        response.data_t.function != FC_READ_HOLDING ||
-        response.data_t.byte_count != 2U) {
-        return 0;
-    }
-    return (uint16_t)(((uint16_t)response.data_t.data[0] << 8) | response.data_t.data[1]);
-}
-
 ///////////////////////////////////////////////////////////////////////////////////////
 
 scd30_uart_error_t scd30_uart_init(const scd30_uart_handle_t* handle) {

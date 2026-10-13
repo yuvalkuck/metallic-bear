@@ -25,6 +25,6 @@ typedef enum {
 
 typedef void (*scd30_read_cb_t)(uint8_t* rx, uint16_t len);
 scd30_status_t scd30_init(scd30_device_t* device, const scd30_uart_handle_t* hbus, scd30_read_cb_t);
-scd30_status_t scd30_get_fiemware_version(scd30_device_t* device, uint8_t* major, uint8_t* minor);
+scd30_status_t scd30_get_firmware_version(scd30_device_t* device, uint8_t* major, uint8_t* minor);
 
 #endif
