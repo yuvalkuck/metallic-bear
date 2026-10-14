@@ -15,7 +15,7 @@ typedef struct {
  * Returned by the sensor when a packet is successfully received but cannot be processed.
  */
 typedef enum {
-    MODBUS_OK                    = 0x00, /**< Success / No Exception */
+    SCD30_OK                    = 0x00, /**< Success / No Exception */
     SCD30_ERROR_ILLEGAL_FUNC    = 0x01, /**< Function code not supported (Only 0x03, 0x04, 0x06 allowed) */
     SCD30_ERROR_ILLEGAL_ADDR    = 0x02, /**< Register address out of bounds or doesn't exist */
     SCD30_ERROR_ILLEGAL_VAL     = 0x03, /**< Payload value out of range (e.g., measurement interval < 2s) */

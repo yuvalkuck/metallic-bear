@@ -32,11 +32,11 @@ scd30_status_t scd30_init(scd30_device_t* device, const scd30_uart_handle_t* hbu
     scd30_irq_ctx[0] = (void*)hbus;
     scd30_irq_ctx[1] = &device->read_props;
     uint8_t version[2] = {0};
-    if ( scd30_get_firmware_version(device, &version[0], &version[1]) != MODBUS_OK ) {
+    if ( scd30_get_firmware_version(device, &version[0], &version[1]) != SCD30_OK ) {
         return SCD30_ERROR_DEVICE_FAIL;
     }
     device->is_initialized = 1;
-    return MODBUS_OK;
+    return SCD30_OK;
 }
 
 scd30_status_t scd30_get_firmware_version(scd30_device_t* device, uint8_t* major, uint8_t* minor) {
@@ -55,7 +55,7 @@ scd30_status_t scd30_get_firmware_version(scd30_device_t* device, uint8_t* major
 
     *major = response.data_t.data[0];
     *minor = response.data_t.data[1];
-    return MODBUS_OK;
+    return SCD30_OK;
 }
 
 scd30_status_t scd30_run(scd30_device_t* device) {
@@ -70,7 +70,7 @@ scd30_status_t scd30_run(scd30_device_t* device) {
     device->timer->SR = ~TIM_SR_UIF; // write 0 to clear
     device->timer->DIER |= TIM_DIER_UIE;
     timer_arm_(device->timer, device->cycle_ms);
-    return MODBUS_OK;
+    return SCD30_OK;
 }
 
 void scd30_stop(scd30_device_t* device) {
