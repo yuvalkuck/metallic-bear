@@ -46,6 +46,8 @@ graph TD
 | **BME688 delay** | Microsecond delay source for the Bosch BME68x API's `bme688_delay_us()` callback | Timer (no I/O pin) | TIM6, internal only | N/A |
 | **MQ7 cycle timer** | 32-bit one-pulse timer that times the MQ7 heat (5.0V) and cool (1.4V) phases | Timer (no I/O pin) | TIM2, internal only | N/A |
 | **SCD30 cycle timer** | One-pulse timer that paces the SCD30 request/reply cycle | Timer (no I/O pin) | TIM7, internal only | N/A |
+| **IWDG** | Independent watchdog, fed within the 2000 ms loop budget | Internal peripheral (no I/O pin) | IWDG, internal only | N/A |
+| **RTC** | Timestamp source for flash log records | Internal peripheral (no I/O pin) | RTC, internal only | N/A |
 | **W25Q128**| 128M-bit Non-Volatile Flash | SPI Master Bus | PC10(CLK), PC11(MISO), PC12(MOSI), PB0(CS) [SPI3] | 2.7V - 3.6V DC VCC |
 | **Button B1** | Hardware Event Interrupt | External EXTI Line | PC13 (Hardwired Blue Switch) | Active-Low External Pull-up |
 
@@ -152,3 +154,15 @@ sequenceDiagram
     D->>A: abort any conversion in flight
     D->>H: set low, 1.4 V
 ```
+
+### Phase 5: IWDG + VREFINT Brownout Check (Safety)
+* **Learning Intent:** Independent watchdog and supply monitoring. IWDG fed within the 2000 ms loop budget. VREFINT read through ADC to compute VDDA and block flash erase/write on low supply.
+* **Why here:** Flash writes are the risky operation. Protect them before logging is built.
+
+### Phase 6: RTC (Timestamps)
+* **Learning Intent:** RTC clock source and calendar setup, reading time safely. Every log record gets a timestamp.
+* **Why here:** A log without time is not useful. Needed before the log format is fixed.
+
+### Phase 7: Flash Log Format (W25Q128)
+* **Learning Intent:** Record format on NOR flash: ring buffer across sectors, wear spread, power-loss recovery on boot.
+* **Why last:** Uses W25Q driver, sensor drivers, RTC and the Phase 5 safety checks together.
