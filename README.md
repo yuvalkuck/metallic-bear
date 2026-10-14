@@ -18,7 +18,7 @@ graph TD
     B1[User Button B1<br>PC13 EXTI]
 
     %% Hardware Connections
-    MCU -->|Analog ADC1_IN1 PA0 / TIM1_CH1 PWM PC0, interrupt-driven heat cycle + sample| MQ7
+    MCU -->|Analog ADC1_IN1 PA0 / GPIO heater switch PC0, TIM2-timed heat cycle + sample| MQ7
     MCU -->|UART Asynchronous USART3| SCD30
     MCU -->|I2C Multi-Master I2C2| BME688
     MCU -->|SPI Master Bus SPI3| W25Q
@@ -40,10 +40,11 @@ graph TD
 
 | Module | Core Purpose | Interface Type | Pin Allocation | Electrical Requirements |
 | :--- | :--- | :--- | :--- | :--- |
-| **MQ7** | Toxic Carbon Monoxide tracking | Analog (ADC) + PWM | PA0 (ADC1_IN1), PC0 (TIM1_CH1) | 5.0V / 1.4V Dual VCC Cycles |
+| **MQ7** | Toxic Carbon Monoxide tracking | Analog (ADC) + GPIO switch | PA0 (ADC1_IN1), PC0 (GPIO out, MQ7_HEATER) | 5.0V / 1.4V Dual VCC Cycles |
 | **SCD30** | Optical NDIR CO2 monitoring | Asynchronous UART | PB10 (TX), PB11 (RX) [USART3] | 3.3V - 5.5V DC VCC |
 | **BME688** | 4-in-1 Volatile Gas/IAQ | I2C Multi-Master Bus | PC4 (SCL), PA8 (SDA) [I2C2] | 1.2V - 3.6V DC VCC (3.3V Typ) |
 | **BME688 delay** | Microsecond delay source for the Bosch BME68x API's `bme688_delay_us()` callback | Timer (no I/O pin) | TIM6, internal only | N/A |
+| **MQ7 cycle timer** | 32-bit one-pulse timer that times the MQ7 heat (5.0V) and cool (1.4V) phases | Timer (no I/O pin) | TIM2, internal only | N/A |
 | **SCD30 cycle timer** | One-pulse timer that paces the SCD30 request/reply cycle | Timer (no I/O pin) | TIM7, internal only | N/A |
 | **W25Q128**| 128M-bit Non-Volatile Flash | SPI Master Bus | PC10(CLK), PC11(MISO), PC12(MOSI), PB0(CS) [SPI3] | 2.7V - 3.6V DC VCC |
 | **Button B1** | Hardware Event Interrupt | External EXTI Line | PC13 (Hardwired Blue Switch) | Active-Low External Pull-up |
@@ -109,6 +110,7 @@ sequenceDiagram
 ```
 
 ### Phase 4: MQ7 Sensor Management (MCU Core Analog & Timers)
-* **Learning Intent:** Master internal microcontroller core configurations. Drive external transistor paths using hardware PWM outputs, execute tracking time profiles, and isolate analog read windows.
+* **Learning Intent:** Master internal microcontroller core configurations. Drive the external heater switch from a GPIO, execute tracking time profiles with a hardware timer, and isolate analog read windows.
 * **Why last:** Teaches how to coordinate multiple internal chip systems (TIM and ADC blocks) to execute complex, time-dependent physical workloads.
-* **Interrupt design:** TIM1's 1 Hz update interrupt serves as a software tick that drives a heat-on → wait → heat-off → wait → sample state machine (swapping the PWM duty cycle between the MQ7's high/low VCC setpoints at each phase boundary, per the datasheet's tens-of-seconds heat/cool timing). At the end of the sensing phase, that tick starts a single ADC1 conversion; ADC1's end-of-conversion interrupt then delivers the raw sample.
+* **Cycle design:** The heater switch on PC0 needs only two levels, high for the 5.0 V heating phase and low for the 1.4 V cooling phase. TIM2, a 32-bit one-pulse timer counting at 10 kHz, times each phase in a single period (about 60 s heating, about 90 s cooling, from the MQ7 datasheet), so the CPU wakes once per phase and not once per second. `run` sets the pin high and arms TIM2 for the heating phase. In the TIM2 interrupt, the end of heating sets the pin low and re-arms TIM2 for cooling; the end of cooling starts one ADC1 conversion, sets the pin high and re-arms TIM2 for heating. ADC1's end-of-conversion interrupt reads the raw sample and hands it to the user callback. `stop` disables the TIM2 interrupt and counter, aborts any conversion in flight and sets the pin low (the 1.4 V state).
+* **Driver split:** Like the SCD30, the MQ7 driver has an ADC layer (`mq7_adc.h`, `adc.c`) and a driver layer on top (`mq7_driver.h`, `driver.c`). The ADC layer only calls down; the driver layer calls it and reports samples up through a `read_cb` function pointer.
