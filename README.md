@@ -114,3 +114,41 @@ sequenceDiagram
 * **Why last:** Teaches how to coordinate multiple internal chip systems (TIM and ADC blocks) to execute complex, time-dependent physical workloads.
 * **Cycle design:** The heater switch on PC0 needs only two levels, high for the 5.0 V heating phase and low for the 1.4 V cooling phase. TIM2, a 32-bit one-pulse timer counting at 10 kHz, times each phase in a single period (about 60 s heating, about 90 s cooling, from the MQ7 datasheet), so the CPU wakes once per phase and not once per second. `run` sets the pin high and arms TIM2 for the heating phase. In the TIM2 interrupt, the end of heating sets the pin low and re-arms TIM2 for cooling; the end of cooling starts one ADC1 conversion, sets the pin high and re-arms TIM2 for heating. ADC1's end-of-conversion interrupt reads the raw sample and hands it to the user callback. `stop` disables the TIM2 interrupt and counter, aborts any conversion in flight and sets the pin low (the 1.4 V state).
 * **Driver split:** Like the SCD30, the MQ7 driver has an ADC layer (`mq7_adc.h`, `adc.c`) and a driver layer on top (`mq7_driver.h`, `driver.c`). The ADC layer only calls down; the driver layer calls it and reports samples up through a `read_cb` function pointer.
+
+```mermaid
+sequenceDiagram
+    participant App as main
+    participant T as TIM2 (one-pulse)
+    participant D as Driver (driver.c)
+    participant A as ADC layer (adc.c)
+    participant H as Heater pin PC0
+    participant S as MQ7
+
+    Note over App,S: Setup, once
+    App->>D: mq7_init(read_cb)
+    D->>A: mq7_adc_sample(), start-up check
+    App->>D: mq7_run()
+    D->>H: set high, 5.0 V heating
+    D->>T: arm(heating, about 60 s)
+
+    Note over T,S: One cycle, interrupts only, repeats until stop
+    T->>D: update interrupt, mq7_timer_irq()
+
+    alt end of heating
+        D->>H: set low, 1.4 V cooling
+        D->>T: arm(cooling, about 90 s)
+    else end of cooling
+        D->>A: start one ADC1 conversion
+        D->>H: set high, 5.0 V heating
+        D->>T: arm(heating, about 60 s)
+        S-->>A: analog level on PA0
+        A-->>D: ADC1_2 end-of-conversion interrupt, raw 12-bit sample
+        D->>App: read_cb(sample)
+    end
+
+    Note over App,S: Break the cycle
+    App->>D: mq7_stop()
+    D->>T: disable interrupt and timer
+    D->>A: abort any conversion in flight
+    D->>H: set low, 1.4 V
+```
