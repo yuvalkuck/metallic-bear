@@ -84,6 +84,8 @@ extern volatile uint32_t g_ms_ticks; /* 1 ms tick, incremented in SysTick_Handle
 #define RCC_OSC_IN_GPIO_Port GPIOF
 #define RCC_OSC_OUT_Pin LL_GPIO_PIN_1
 #define RCC_OSC_OUT_GPIO_Port GPIOF
+#define MQ7_HEATER_Pin LL_GPIO_PIN_0
+#define MQ7_HEATER_GPIO_Port GPIOC
 #define LPUART1_TX_Pin LL_GPIO_PIN_2
 #define LPUART1_TX_GPIO_Port GPIOA
 #define LPUART1_RX_Pin LL_GPIO_PIN_3
