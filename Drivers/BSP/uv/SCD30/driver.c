@@ -21,7 +21,7 @@ static inline void scd30_driver_process(scd30_uart_error_t err, uint16_t len) {
 
 scd30_status_t scd30_init(scd30_device_t* device, const scd30_uart_handle_t* hbus, scd30_read_cb_t read_cb) {
     if (device == NULL || hbus == NULL || read_cb == NULL) {
-        return MODBUS_ERROR_PARAMETER;
+        return SCD30_ERROR_PARAMETER;
     }
 
     device->is_initialized = 0;
@@ -31,23 +31,26 @@ scd30_status_t scd30_init(scd30_device_t* device, const scd30_uart_handle_t* hbu
     s_scd30_process = read_cb;
     scd30_irq_ctx[0] = (void*)hbus;
     scd30_irq_ctx[1] = &device->read_props;
-
+    uint8_t version[2] = {0};
+    if ( scd30_get_firmware_version(device, &version[0], &version[1]) != MODBUS_OK ) {
+        return SCD30_ERROR_DEVICE_FAIL;
+    }
     device->is_initialized = 1;
     return MODBUS_OK;
 }
 
 scd30_status_t scd30_get_firmware_version(scd30_device_t* device, uint8_t* major, uint8_t* minor) {
     if (device == NULL || device->hbus == NULL || major == NULL || minor == NULL) {
-        return MODBUS_ERROR_PARAMETER;
+        return SCD30_ERROR_PARAMETER;
     }
 
     scd30_uart_response_t response;
     scd30_uart_error_t err = scd30_uart_read(device->hbus, SCD30_REG_FIRMWARE_VERSION, &response);
     if (err == UART_ERROR_EXCEPTION_RETURNED) {
-        return (scd30_status_t)response.exception_t.code; // 1..4 matches the MODBUS_ERROR_* values
+        return (scd30_status_t)response.exception_t.code; // 1..4 matches the SCD30_ERROR_* values
     }
     if (err != UART_OK) {
-        return MODBUS_ERROR_DEVICE_FAIL; // timeout, CRC, malformed
+        return SCD30_ERROR_DEVICE_FAIL; // timeout, CRC, malformed
     }
 
     *major = response.data_t.data[0];
@@ -58,11 +61,11 @@ scd30_status_t scd30_get_firmware_version(scd30_device_t* device, uint8_t* major
 scd30_status_t scd30_run(scd30_device_t* device) {
     if (device == NULL || !device->is_initialized || device->timer == NULL ||
         device->cycle_ms == 0 || device->cycle_ms > SCD30_CYCLE_MAX_MS) {
-        return MODBUS_ERROR_PARAMETER;
+        return SCD30_ERROR_PARAMETER;
     }
     scd30_uart_response_t response;
     if (scd30_uart_write(device->hbus, SCD30_REG_START_MEASUREMENT, 0U, &response) != UART_OK) { // 0 = no pressure compensation
-        return MODBUS_ERROR_DEVICE_FAIL;
+        return SCD30_ERROR_DEVICE_FAIL;
     }
     device->timer->SR = ~TIM_SR_UIF; // write 0 to clear
     device->timer->DIER |= TIM_DIER_UIE;
