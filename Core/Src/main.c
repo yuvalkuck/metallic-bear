@@ -26,6 +26,7 @@
 #include "bme688_driver.h"
 #include "bme68x.h"
 #include "scd30_driver.h"
+#include "mq7_driver.h"
 
 /* USER CODE END Includes */
 
@@ -33,7 +34,7 @@
 /* USER CODE BEGIN PTD */
 volatile w25q_status_t g_w25q_last_error = W25Q_OK;
 volatile bme688_status_t g_bme688_last_error = BME688_OK;
-volatile scd30_status_t g_scd30_last_error = MODBUS_OK;
+volatile scd30_status_t g_scd30_last_error = SCD30_OK;
 
 w25q_spi_handle_t w25q_spi3 = {
     SPI3,W25Q_CS_GPIO_Port, W25Q_CS_Pin
@@ -47,10 +48,17 @@ scd30_uart_handle_t scd30_uart = {
     DMA1_Channel1, DMA1_Channel2,
     1, 2 /* 1-based DMA channel numbers */
 };
+mq7_adc_handle_t mq7_adc = {
+    ADC1,
+    MQ7_HEATER_GPIO_Port, MQ7_HEATER_Pin
+};
 w25q_device_t w25q_device = {};
 bme688_device_t bme688_device = {};
 scd30_device_t scd30_device = {
     .timer = TIM7, .cycle_ms = 5000
+};
+mq7_device_t mq7_device = {
+    .timer = TIM2
 };
 /* USER CODE END PTD */
 
@@ -190,7 +198,7 @@ static bme688_status_t bme688_self_test(bme688_device_t* device) {
 }
 
 static void scd30_read_buffer(uint8_t* rx, uint16_t len) {}
-
+static void mq7_read_buffer(uint16_t* value) {}
 /* USER CODE END 0 */
 
 /**
@@ -276,7 +284,7 @@ int main(void)
     props->rx_buffer = read_buf;
     props->rx_cap = 64;
 
-    if (scd30_init(&scd30_device, &scd30_uart, scd30_read_buffer) != MODBUS_OK) {
+    if (scd30_init(&scd30_device, &scd30_uart, scd30_read_buffer) != SCD30_OK) {
         Error_Handler();
     }
 
@@ -286,7 +294,18 @@ int main(void)
                          &scd30_resp) != UART_OK) {
         Error_Handler();
     }
-    if (scd30_run(&scd30_device) != MODBUS_OK) {
+    if (scd30_run(&scd30_device) != SCD30_OK) {
+        Error_Handler();
+    }
+
+    // MQ7 init sequence
+    if (mq7_adc_init(&mq7_adc) != ADC_OK) {
+        Error_Handler();
+    }
+    if (mq7_init(&mq7_device, &mq7_adc, mq7_read_buffer) != MQ7_OK) {
+        Error_Handler();
+    }
+    if (mq7_run(&mq7_device) != MQ7_OK) {
         Error_Handler();
     }
 
