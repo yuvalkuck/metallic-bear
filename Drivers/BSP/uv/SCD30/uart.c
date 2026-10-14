@@ -22,7 +22,7 @@ static inline uint32_t dma_flag_mask(uint8_t ch) {
 }
 
 // Modbus RTU CRC16: init 0xFFFF, polynomial 0xA001. The result goes to the frame's crc field, low byte first.
-static void modbus_crc16(const uint8_t* buf, uint16_t len, low_high_t* crc) {
+static void modbus_crc16_(const uint8_t* buf, uint16_t len, low_high_t* crc) {
     uint16_t value = 0xFFFFU;
     for (uint16_t ii = 0; ii < len; ii++) {
         value ^= buf[ii];
@@ -34,12 +34,12 @@ static void modbus_crc16(const uint8_t* buf, uint16_t len, low_high_t* crc) {
     crc->hi = (uint8_t)(value >> 8);
 }
 
-static inline uint8_t is_crc_ok(const uint8_t* frame, uint16_t len) {
+static inline uint8_t is_crc_ok_(const uint8_t* frame, uint16_t len) {
     if (len < 3U) {
         return 0;
     }
     low_high_t crc;
-    modbus_crc16(frame, (uint16_t)(len - 2U), &crc);
+    modbus_crc16_(frame, (uint16_t)(len - 2U), &crc);
     return (crc.lo == frame[len - 2U]) && (crc.hi == frame[len - 1U]);
 }
 
@@ -51,7 +51,7 @@ static void fill_frame_(modbus_tx_frame_t* frame, modbus_function_code_t fc, scd
     frame->reg_command.lo = (uint8_t)(command & 0xFFU);
     frame->data.hi = (uint8_t)(data >> 8);
     frame->data.lo = (uint8_t)(data & 0xFFU);
-    modbus_crc16((const uint8_t*)frame, 6U, &frame->crc);
+    modbus_crc16_((const uint8_t*)frame, 6U, &frame->crc);
 }
 
 // Sends len bytes, polled, and waits until the last one is fully out. Blocking, with timeout.
@@ -76,7 +76,7 @@ static inline scd30_uart_error_t send_frame_(const scd30_uart_handle_t* handle, 
     return UART_OK;
 }
 
-static scd30_reply_status_t receive_and_validate(const scd30_uart_handle_t* handle,
+static scd30_reply_status_t receive_and_validate_(const scd30_uart_handle_t* handle,
                                                  scd30_uart_response_t* response) {
     const uint32_t t0 = g_ms_ticks; // timeout counts from the start of the receive
     uint8_t expected = 3U;          // start with the header: address, function, third byte
@@ -100,7 +100,7 @@ static scd30_reply_status_t receive_and_validate(const scd30_uart_handle_t* hand
             }
         }
     }
-    if (!is_crc_ok(response->raw, expected)) {
+    if (!is_crc_ok_(response->raw, expected)) {
         return SCD30_REPLY_BAD_CRC;
     }
     if (response->raw[1] & MODBUS_EXCEPTION_FLAG) {
@@ -160,7 +160,7 @@ scd30_uart_error_t scd30_uart_write(const scd30_uart_handle_t* handle, scd30_reg
     if (send_frame_(handle, &frame) != UART_OK) {
         return UART_ERROR_TIMEOUT;
     }
-    scd30_reply_status_t status = receive_and_validate(handle, response);
+    scd30_reply_status_t status = receive_and_validate_(handle, response);
     if (status > SCD30_REPLY_OK) {
         if (status == SCD30_REPLY_TIMEOUT) {
             return UART_ERROR_TIMEOUT;
@@ -212,12 +212,12 @@ scd30_uart_error_t scd30_uart_read(const scd30_uart_handle_t* handle, scd30_regi
     frame.reg_command.lo = (uint8_t)(command & 0xFFU);
     frame.data.hi = (uint8_t)(count >> 8);
     frame.data.lo = (uint8_t)(count & 0xFFU);
-    modbus_crc16((const uint8_t*)&frame, 6U, &frame.crc);
+    modbus_crc16_((const uint8_t*)&frame, 6U, &frame.crc);
 
     if (send_frame_(handle, &frame) != UART_OK) {
         return UART_ERROR_TIMEOUT;
     }
-    scd30_reply_status_t status = receive_and_validate(handle, response);
+    scd30_reply_status_t status = receive_and_validate_(handle, response);
     if (status > SCD30_REPLY_OK) {
         if (status == SCD30_REPLY_TIMEOUT) {
             return UART_ERROR_TIMEOUT;
