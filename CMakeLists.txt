@@ -50,11 +50,13 @@ TARGET_LINK_DIRECTORIES(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 TARGET_SOURCES(${CMAKE_PROJECT_NAME} PRIVATE
         # Add user sources here
+        Core/Src/self_test.c
 )
 
 # Add include paths
 TARGET_INCLUDE_DIRECTORIES(${CMAKE_PROJECT_NAME} PRIVATE
         # Add user defined include paths
+        Core/Inc
 )
 
 # Add project symbols (macros)
