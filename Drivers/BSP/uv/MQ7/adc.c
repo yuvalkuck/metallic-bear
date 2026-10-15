@@ -6,7 +6,34 @@
 #define MQ7_ADC_TIMEOUT_LOOPS 100000U
 
 mq7_adc_error_t mq7_adc_init(const mq7_adc_handle_t* handle) {
-    return ADC_ERROR_NOT_IMPLEMENTED;
+    if (handle == NULL) {
+        return ADC_ERROR_INVALID_PARAMS;
+    }
+    // Calibration, there is no failed-calibration only Hang there for TIMEOUT
+    LL_ADC_StartCalibration(handle->bus, LL_ADC_SINGLE_ENDED);
+    uint32_t timeout = MQ7_ADC_TIMEOUT_LOOPS;
+    while (LL_ADC_IsCalibrationOnGoing(handle->bus)) {
+        if (--timeout == 0) {
+            return ADC_ERROR_CALIBRATION_TIMEOUT;
+        }
+    }
+    LL_ADC_ClearFlag_ADRDY(handle->bus);
+    LL_ADC_Enable(handle->bus);
+    timeout = MQ7_ADC_TIMEOUT_LOOPS;
+    while (!LL_ADC_IsActiveFlag_ADRDY(handle->bus)) {
+        if (--timeout == 0) {
+            /**
+             * can happen when:
+            * - Regulator not on (ADVREGEN clear).
+            * - ADC still in deep power-down.
+            * - No ADC clock.
+            */
+            return ADC_ERROR_TIMEOUT;
+        }
+    }
+    // enable the interrupt
+    LL_ADC_EnableIT_EOC(handle->bus);
+    return ADC_OK;
 }
 
 // TIMer start
