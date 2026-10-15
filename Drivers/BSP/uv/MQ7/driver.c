@@ -8,6 +8,7 @@ mq7_device_t *mq7_dev_irq_ctx;
 
 #define MQ7_HEAT_MS 60000U
 #define MQ7_COOL_MS 90000U
+
 // TIM2 counts 10 kHz and stops itself (one-pulse): write ARR, then set CEN
 static void timer_arm_(TIM_TypeDef* timer, uint32_t ms) {
     LL_TIM_SetAutoReload(timer, ms * 10U - 1U);

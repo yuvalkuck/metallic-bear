@@ -10,6 +10,7 @@
 #define W25Q_TEST_ADDRESS 0x00000000U
 #define W25Q_TEST_LENGTH  256U
 
+
 /**
  * @brief Sector erase -> page program -> read-back self-test for the W25Q128 driver.
  *        Step into this with the debugger and watch the return value / g_w25q_last_error.
@@ -116,19 +117,6 @@ static float scd30_be_float(const uint8_t* p) {
     float f;
     memcpy(&f, &u, sizeof f);
     return f;
-}
-
-scd30_status_t scd30_self_test(const uint8_t* rx, uint16_t len) {
-    if (len != SCD30_RX_MAX || rx[2] != 2U * SCD30_MEASUREMENT_REGS) {
-        return SCD30_ERROR_DEVICE_FAIL;
-    }
-    float co2 = scd30_be_float(&rx[3]);
-    float temp = scd30_be_float(&rx[7]);
-    float rh = scd30_be_float(&rx[11]);
-    if (co2 < 0.0f || co2 > 40000.0f || temp < -40.0f || temp > 70.0f || rh < 0.0f || rh > 100.0f) {
-        return SCD30_ERROR_DEVICE_FAIL;
-    }
-    return SCD30_OK;
 }
 
 mq7_status_t mq7_self_test(mq7_device_t* device) {
