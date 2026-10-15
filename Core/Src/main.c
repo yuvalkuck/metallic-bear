@@ -35,7 +35,6 @@
 /* USER CODE BEGIN PTD */
 volatile w25q_status_t g_w25q_last_error = W25Q_OK;
 volatile bme688_status_t g_bme688_last_error = BME688_OK;
-volatile scd30_status_t g_scd30_last_error = SCD30_OK;
 volatile mq7_status_t g_mq7_last_error = MQ7_OK;
 
 w25q_spi_handle_t w25q_spi3 = {

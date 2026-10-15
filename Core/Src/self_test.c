@@ -112,13 +112,6 @@ bme688_status_t bme688_self_test(bme688_device_t* device) {
     return BME688_OK;
 }
 
-static float scd30_be_float(const uint8_t* p) {
-    uint32_t u = ((uint32_t)p[0] << 24) | ((uint32_t)p[1] << 16) | ((uint32_t)p[2] << 8) | p[3];
-    float f;
-    memcpy(&f, &u, sizeof f);
-    return f;
-}
-
 mq7_status_t mq7_self_test(mq7_device_t* device) {
     uint16_t v;
     for (int i = 0; i < 2; i++) {
