@@ -33,7 +33,7 @@ typedef enum {
     SCD30_REG_READ_MEASUREMENT_BLOCK     = 0x0028  // FC04: Read 6 consecutive registers for CO2, Temp, and RH floats
 } scd30_register_t;
 
-#define SCD30_UART_TIMEOUT_MS 100U
+#define SCD30_UART_TIMEOUT_MS 200U
 #define SCD30_MODBUS_ID 0X61
 
 typedef enum {

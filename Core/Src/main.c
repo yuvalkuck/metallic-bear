@@ -149,6 +149,7 @@ int main(void)
   MX_TIM7_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+    LL_SYSTICK_EnableIT(); /* LL_Init1msTick leaves the SysTick interrupt off */
 
     if (w25q_spi_init(&w25q_spi3) != SPI_OK) {
         g_w25q_last_error = W25Q_ERROR_SPI_FAIL;
@@ -294,7 +295,7 @@ void SystemClock_Config(void)
 
 /**
   * @brief ADC1 Initialization Function
-  * @param None
+  * @param one
   * @retval None
   */
 static void MX_ADC1_Init(void)
