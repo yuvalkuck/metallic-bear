@@ -42,6 +42,10 @@
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN PV */
 extern void* scd30_irq_ctx[2]; /* [0] = scd30 uart handle, [1] = read properties; filled by the scd30 driver */
+extern const void* mq7_adc_irq_ctx;
+extern const void* mq7_dev_irq_ctx;
+extern void mq7_adc_eoc_irq(const void *);
+extern void mq7_timer_irq(const void* );
 extern void scd30_uart_idle_irq(void* handle, void* props);
 extern void scd30_timer_irq(void);
 volatile uint32_t g_ms_ticks = 0;
@@ -225,7 +229,7 @@ void ADC1_2_IRQHandler(void)
 
   /* USER CODE END ADC1_2_IRQn 0 */
   /* USER CODE BEGIN ADC1_2_IRQn 1 */
-
+  mq7_adc_eoc_irq(mq7_adc_irq_ctx);
   /* USER CODE END ADC1_2_IRQn 1 */
 }
 
@@ -238,6 +242,8 @@ void TIM2_IRQHandler(void)
 
   /* USER CODE END TIM2_IRQn 0 */
   /* USER CODE BEGIN TIM2_IRQn 1 */
+  mq7_timer_irq(mq7_dev_irq_ctx);
+
 
   /* USER CODE END TIM2_IRQn 1 */
 }

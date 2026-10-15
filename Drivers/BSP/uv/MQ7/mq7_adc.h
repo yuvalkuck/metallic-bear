@@ -12,21 +12,23 @@ typedef enum {
     ADC_ERROR_NOT_IMPLEMENTED     = -5,
 } mq7_adc_error_t;
 
-typedef void (*mq7_adc_read_cb_t)(mq7_adc_error_t err, uint16_t len);
-
 typedef struct {
-    ADC_TypeDef* bus;      // bus type
-    GPIO_TypeDef* ht_port; /* GPIO Port for Heater switch*/
-    uint16_t ht_pin;       /* GPIO Pin for Heater switch*/
-    mq7_adc_read_cb_t read_cb;
+    ADC_TypeDef* bus;                // bus type
+    void (*read_cb)(uint16_t value); // set by the driver layer, runs in interrupt context
 } mq7_adc_handle_t;
 
 mq7_adc_error_t mq7_adc_init(const mq7_adc_handle_t* handle);
+/**
+ * Blocking single conversion, the EOC interrupt is masked while it polls
+ * @param handle
+ * @param sample return value
+ * @return
+ */
 mq7_adc_error_t mq7_adc_sample(const mq7_adc_handle_t* handle, uint16_t* sample);
-// TIMer start
+/** Starts one conversion, the result arrives through the EOC interrupt (read_cb). */
 mq7_adc_error_t mq7_adc_start(const mq7_adc_handle_t* handle);
+/** Aborts a conversion in flight, waits for it to stop and clears EOC. */
 mq7_adc_error_t mq7_adc_stop(const mq7_adc_handle_t* handle);
-
-void mq7_adc_idle_irq(const mq7_adc_handle_t* handle);
+void mq7_adc_eoc_irq(const mq7_adc_handle_t* handle);
 
 #endif

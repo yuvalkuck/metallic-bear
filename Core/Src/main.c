@@ -49,8 +49,7 @@ scd30_uart_handle_t scd30_uart = {
     1, 2 /* 1-based DMA channel numbers */
 };
 mq7_adc_handle_t mq7_adc = {
-    ADC1,
-    MQ7_HEATER_GPIO_Port, MQ7_HEATER_Pin
+    ADC1
 };
 w25q_device_t w25q_device = {};
 bme688_device_t bme688_device = {};
@@ -58,7 +57,8 @@ scd30_device_t scd30_device = {
     .timer = TIM7, .cycle_ms = 5000
 };
 mq7_device_t mq7_device = {
-    .timer = TIM2
+    .timer = TIM2,
+    .ht_port = MQ7_HEATER_GPIO_Port, .ht_pin = MQ7_HEATER_Pin
 };
 /* USER CODE END PTD */
 
@@ -198,7 +198,7 @@ static bme688_status_t bme688_self_test(bme688_device_t* device) {
 }
 
 static void scd30_read_buffer(uint8_t* rx, uint16_t len) {}
-static void mq7_read_buffer(uint16_t* value) {}
+static void mq7_read_buffer(uint16_t value) {}
 /* USER CODE END 0 */
 
 /**
